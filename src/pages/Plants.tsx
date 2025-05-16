@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plant, Plus, Edit, Trash } from "lucide-react";
+import { Leaf, Plus, Edit, Trash } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -53,7 +52,7 @@ const Plants = () => {
       {plants.length === 0 ? (
         <Card className="text-center p-8">
           <CardContent className="pt-6">
-            <Plant className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <Leaf className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-xl font-medium mb-2">{t("plants.noPlants")}</h3>
             <p className="text-muted-foreground mb-4">{t("plants.addPlant")}</p>
             <Button>
@@ -114,7 +113,7 @@ const Plants = () => {
           
           {plants.length < 2 && (
             <Card className="border-dashed border-2 flex flex-col items-center justify-center text-center p-6">
-              <Plant className="h-12 w-12 text-muted-foreground mb-4" />
+              <Leaf className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-xl font-medium mb-2">{t("plants.addPlant")}</h3>
               <Button size="sm" className="mt-2">
                 <Plus className="mr-2 h-4 w-4" />
@@ -125,10 +124,10 @@ const Plants = () => {
           
           {plants.length >= 2 && (
             <Card className="border-dashed border-2 flex flex-col items-center justify-center text-center p-6">
-              <Plant className="h-12 w-12 text-muted-foreground mb-4" />
+              <Leaf className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-xl font-medium mb-2">{t("plants.upgradePlans")}</h3>
               <p className="text-muted-foreground mb-4">Free plan limited to 2 plants</p>
-              <Button size="sm" variant="premium">
+              <Button size="sm" variant="secondary">
                 {t("profile.upgradeAccount")}
               </Button>
             </Card>

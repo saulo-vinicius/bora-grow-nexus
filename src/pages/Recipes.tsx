@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Plant, Calculator, Trash, Copy, Download } from "lucide-react";
+import { FileText, Leaf, Calculator, Trash, Copy, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Mock recipes data - would come from Supabase in production
@@ -171,7 +170,7 @@ const Recipes = () => {
                     <Trash className="h-4 w-4" />
                   </Button>
                   <Button size="sm">
-                    <Plant className="h-4 w-4 mr-2" />
+                    <Leaf className="h-4 w-4 mr-2" />
                     {t("recipes.applyToPlant")}
                   </Button>
                 </div>

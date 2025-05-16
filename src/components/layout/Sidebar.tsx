@@ -1,5 +1,5 @@
 
-import { Home, Plant, Calculator, FileText, User, X } from "lucide-react";
+import { Home, Leaf, Calculator, FileText, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -18,7 +18,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
 
   const navigationItems = [
     { icon: Home, label: t("menu.home"), href: "/" },
-    { icon: Plant, label: t("menu.myPlants"), href: "/plants" },
+    { icon: Leaf, label: t("menu.myPlants"), href: "/plants" },
     { icon: Calculator, label: t("menu.calculator"), href: "/calculator" },
     { icon: FileText, label: t("menu.recipes"), href: "/recipes" },
     { icon: User, label: t("menu.profile"), href: "/profile" },

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,6 +21,26 @@ import { Search, X, Plus, FileText, Copy, Download, Save } from "lucide-react";
 
 import { CalculatorLogic } from "@/logic/CalculatorLogic";
 
+// Define interface for targets to fix TypeScript errors
+interface TargetElements {
+  "N(NO3-)": number;
+  "N(NH4+)": number;
+  P: number;
+  K: number;
+  Ca: number;
+  Mg: number;
+  S: number;
+  Fe: number;
+  Mn: number;
+  Zn: number;
+  B: number;
+  Cu: number;
+  Si: number;
+  Mo: number;
+  Na: number;
+  Cl: number;
+}
+
 const DEFAULT_TARGETS = {
   veg: {
     "N(NO3-)": 199,
@@ -40,7 +59,7 @@ const DEFAULT_TARGETS = {
     Mo: 0,
     Na: 0,
     Cl: 0
-  },
+  } as TargetElements,
   flowering: {
     "N(NO3-)": 150,
     "N(NH4+)": 0,
@@ -58,7 +77,7 @@ const DEFAULT_TARGETS = {
     Mo: 0,
     Na: 0,
     Cl: 0
-  }
+  } as TargetElements
 };
 
 // Mock substances from HydroBuddy
@@ -116,7 +135,7 @@ const Calculator = () => {
   const [massUnit, setMassUnit] = useState<string>("grams");
   
   const [targetMode, setTargetMode] = useState<"veg" | "flowering">("veg");
-  const [targets, setTargets] = useState({ ...DEFAULT_TARGETS.veg });
+  const [targets, setTargets] = useState<TargetElements>({ ...DEFAULT_TARGETS.veg });
   
   const [selectedSubstances, setSelectedSubstances] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -152,9 +171,9 @@ const Calculator = () => {
   };
   
   const clearTargets = () => {
-    const emptyTargets: Record<string, number> = {};
+    const emptyTargets: TargetElements = { ...targets };
     Object.keys(targets).forEach(key => {
-      emptyTargets[key] = 0;
+      emptyTargets[key as keyof TargetElements] = 0;
     });
     setTargets(emptyTargets);
   };
@@ -228,7 +247,7 @@ const Calculator = () => {
                 
                 <div>
                   <Label htmlFor="mass-units">{t("calculator.massUnits")}</Label>
-                  <Select value={massUnit} onValueChange={setMassUnit} id="mass-units">
+                  <Select value={massUnit} onValueChange={setMassUnit}>
                     <SelectTrigger className="w-full mt-1">
                       <SelectValue />
                     </SelectTrigger>
