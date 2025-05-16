@@ -1,9 +1,20 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import "./lib/i18n"; // Import i18n configuration
+
+import MainLayout from "./components/layout/MainLayout";
+
+// Pages
+import Home from "./pages/Home";
+import Plants from "./pages/Plants";
+import PlantDetail from "./pages/PlantDetail";
+import Calculator from "./pages/Calculator";
+import Recipes from "./pages/Recipes";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,9 +26,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/plants" element={<Plants />} />
+            <Route path="/plants/:plantId" element={<PlantDetail />} />
+            <Route path="/calculator" element={<Calculator />} />
+            <Route path="/recipes" element={<Recipes />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
