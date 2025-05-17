@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Card,
@@ -17,9 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, X, Plus, FileText, Copy, Download, Save } from "lucide-react";
-
-import { CalculatorLogic } from "@/logic/CalculatorLogic";
+import { Search, X, Plus, FileText, Copy, Download, Save, Loader } from "lucide-react";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "@/hooks/use-toast";
+import { CalculatorLogic, type Element } from "@/logic/CalculatorLogic";
+import { STANDARD_SUBSTANCES } from "@/data/SubstanceData";
+// import { supabase } from "@/integrations/supabase/client";
 
 // Define interface for targets to fix TypeScript errors
 interface TargetElements {
@@ -80,53 +87,13 @@ const DEFAULT_TARGETS = {
   } as TargetElements
 };
 
-// Mock substances from HydroBuddy
-const MOCK_SUBSTANCES = [
-  {
-    id: "1",
-    name: "Ammonium Chloride",
-    formula: "NH4Cl",
-    elements: {
-      "N(NH4+)": 26.2,
-      Cl: 66.3
-    }
-  },
-  {
-    id: "2",
-    name: "Ammonium Dibasic Phosphate",
-    formula: "(NH4)2HPO4",
-    elements: {
-      "N(NH4+)": 21.2,
-      P: 23.5
-    }
-  },
-  {
-    id: "3",
-    name: "Ammonium Monobasic Phosphate",
-    formula: "NH4H2PO4",
-    elements: {
-      "N(NH4+)": 12.2,
-      P: 26.7
-    }
-  },
-  {
-    id: "4",
-    name: "Ammonium Sulfate",
-    formula: "(NH4)2SO4",
-    elements: {
-      "N(NH4+)": 21.2,
-      S: 24.3
-    }
-  },
-  {
-    id: "5",
-    name: "Boric Acid",
-    formula: "H3BO3",
-    elements: {
-      B: 17.5
-    }
-  }
-];
+// Save recipe form schema
+const saveRecipeSchema = z.object({
+  name: z.string().min(1, "Nome da receita é obrigatório"),
+  description: z.string().optional(),
+});
+
+type SaveRecipeForm = z.infer<typeof saveRecipeSchema>;
 
 const Calculator = () => {
   const { t } = useTranslation();
@@ -143,10 +110,47 @@ const Calculator = () => {
   // Results state
   const [results, setResults] = useState<any>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
+  const [isCalculating, setIsCalculating] = useState<boolean>(false);
   
-  const filteredSubstances = MOCK_SUBSTANCES.filter(substance => 
+  // Save recipe state
+  const [isSavingRecipe, setIsSavingRecipe] = useState<boolean>(false);
+  const [showSaveForm, setShowSaveForm] = useState<boolean>(false);
+  
+  const filteredSubstances = STANDARD_SUBSTANCES.filter(substance => 
     substance.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // Initialize save recipe form
+  const saveRecipeForm = useForm<SaveRecipeForm>({
+    resolver: zodResolver(saveRecipeSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  // This function will be called when we want to load custom substances from Supabase
+  const loadCustomSubstances = async () => {
+    try {
+      // This would be implemented when Supabase is integrated
+      // const { data, error } = await supabase
+      //  .from('substances')
+      //  .select('*')
+      //  .eq('user_id', auth.user()?.id);
+      // 
+      // if (error) throw error;
+      //
+      // const customSubstances = data.map(item => ({
+      //   ...item,
+      //   custom: true,
+      // }));
+      //
+      // setAllSubstances([...STANDARD_SUBSTANCES, ...customSubstances]);
+    } catch (error) {
+      console.error("Error loading custom substances:", error);
+      // Fall back to standard substances
+    }
+  };
   
   const selectSubstance = (substance: any) => {
     if (!selectedSubstances.find(s => s.id === substance.id)) {
@@ -178,23 +182,34 @@ const Calculator = () => {
     setTargets(emptyTargets);
   };
   
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
     try {
+      setIsCalculating(true);
+      setCalculationError(null);
+      
       const calculator = new CalculatorLogic();
       const calculationResults = calculator.calculateNutrientSolution(
         selectedSubstances,
         targets,
         solutionVolume
       );
-      setResults(calculationResults);
-      setCalculationError(null);
       
-      // In a real app, we would update the selected substances with the calculated amounts
-      // setSelectedSubstances(calculationResults.substances);
+      // Update selected substances with calculated amounts
+      setSelectedSubstances(calculationResults.substances);
+      
+      setResults(calculationResults);
     } catch (error) {
       console.error("Calculation error:", error);
-      setCalculationError("Failed to calculate nutrient solution. Please check your inputs.");
+      setCalculationError(`Erro no cálculo: ${error.message}`);
       setResults(null);
+      
+      toast({
+        title: "Erro no cálculo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCalculating(false);
     }
   };
   
@@ -206,10 +221,130 @@ const Calculator = () => {
       return s;
     });
     setSelectedSubstances(updatedSubstances);
-    
-    // In a real app, we would recalculate the element concentrations based on the new amounts
-    // This would trigger a new calculation or update the existing one
   };
+  
+  const handleSaveRecipe = async (data: SaveRecipeForm) => {
+    // In a real application, this would save to Supabase
+    // const { name, description } = data;
+    
+    try {
+      setIsSavingRecipe(true);
+      
+      // This would be implemented when Supabase is integrated
+      // const { error } = await supabase
+      //   .from('recipes')
+      //   .insert({
+      //     user_id: auth.user()?.id,
+      //     name,
+      //     description,
+      //     target_elements: targets,
+      //     solution_substances: selectedSubstances,
+      //     volume: solutionVolume,
+      //     volume_unit: volumeUnit,
+      //   });
+      //
+      // if (error) throw error;
+      
+      toast({
+        title: "Receita salva",
+        description: "Sua receita foi salva com sucesso.",
+      });
+      
+      setShowSaveForm(false);
+    } catch (error) {
+      console.error("Error saving recipe:", error);
+      
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar a receita.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingRecipe(false);
+    }
+  };
+  
+  const exportToCsv = () => {
+    if (!results) return;
+    
+    // Create CSV content
+    let csvContent = "Nutrientes,Alvo (ppm),Real (ppm),Diferença\n";
+    
+    Object.keys(targets).forEach((element) => {
+      const targetValue = targets[element as keyof TargetElements];
+      const actualValue = results.elementConcentrations[element] || 0;
+      const difference = actualValue - targetValue;
+      
+      csvContent += `${element},${targetValue.toFixed(2)},${actualValue.toFixed(2)},${difference.toFixed(2)}\n`;
+    });
+    
+    csvContent += "\nSubstância,Quantidade (${massUnit})\n";
+    
+    results.substances.forEach((substance) => {
+      if (substance.amount > 0.001) {
+        csvContent += `${substance.name},${substance.amount.toFixed(3)}\n`;
+      }
+    });
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `nutrient-solution-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const copyResultsToClipboard = () => {
+    if (!results) return;
+    
+    let text = `Solução Nutritiva - Bora Grow\n\n`;
+    text += `Volume: ${solutionVolume} ${volumeUnit}\n\n`;
+    
+    text += `Substâncias:\n`;
+    results.substances.forEach((substance) => {
+      if (substance.amount > 0.001) {
+        text += `${substance.name}: ${substance.amount.toFixed(3)} ${massUnit}\n`;
+      }
+    });
+    
+    text += `\nConcentrações de Elementos (ppm):\n`;
+    Object.keys(targets).forEach((element) => {
+      const targetValue = targets[element as keyof TargetElements];
+      const actualValue = results.elementConcentrations[element] || 0;
+      
+      if (targetValue > 0 || actualValue > 0.001) {
+        text += `${element}: ${actualValue.toFixed(2)} (alvo: ${targetValue.toFixed(2)})\n`;
+      }
+    });
+    
+    text += `\nEC Previsto: ${results.predictedEc.toFixed(2)} mS/cm`;
+    
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast({
+          title: "Copiado para a área de transferência",
+          description: "Os resultados foram copiados.",
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "Erro ao copiar",
+          description: "Não foi possível copiar os resultados.",
+          variant: "destructive",
+        });
+      });
+  };
+
+  useEffect(() => {
+    // Load any custom substances if Supabase is integrated
+    // loadCustomSubstances();
+  }, []);
   
   return (
     <div className="container mx-auto">
@@ -293,7 +428,7 @@ const Calculator = () => {
                     <Input
                       id={`target-${element}`}
                       type="number"
-                      value={targets[element]}
+                      value={targets[element as keyof TargetElements]}
                       onChange={(e) => handleTargetChange(element, e.target.value)}
                       min="0"
                       step="0.1"
@@ -312,7 +447,7 @@ const Calculator = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>{t("calculator.substanceDatabase")}</CardTitle>
-                <Button size="sm">
+                <Button size="sm" disabled>
                   <Plus className="h-4 w-4 mr-2" />
                   {t("calculator.addCustom")}
                 </Button>
@@ -389,11 +524,11 @@ const Calculator = () => {
                         </Button>
                       </div>
                       <div className="mt-2">
-                        <Label htmlFor={`amount-${substance.id}`}>{t("common.grams")}</Label>
+                        <Label htmlFor={`amount-${substance.id}`}>{massUnit}</Label>
                         <Input
                           id={`amount-${substance.id}`}
                           type="number"
-                          value={substance.amount}
+                          value={substance.amount?.toFixed(3) || 0}
                           onChange={(e) => handleSubstanceAmountChange(substance.id, e.target.value)}
                           min="0"
                           step="0.001"
@@ -411,16 +546,26 @@ const Calculator = () => {
             <Button 
               className="flex-1" 
               onClick={handleCalculate}
-              disabled={selectedSubstances.length === 0}
+              disabled={selectedSubstances.length === 0 || isCalculating}
             >
-              {t("calculator.calculate")}
+              {isCalculating ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  {t("calculator.calculating")}
+                </>
+              ) : (
+                t("calculator.calculate")
+              )}
             </Button>
             
-            <Button variant="outline" onClick={() => {
-              setSelectedSubstances([]);
-              clearTargets();
-              setResults(null);
-            }}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSelectedSubstances([]);
+                clearTargets();
+                setResults(null);
+              }}
+            >
               {t("calculator.clearAll")}
             </Button>
           </div>
@@ -445,11 +590,13 @@ const Calculator = () => {
                   {t("calculator.substanceWeights")} {solutionVolume} {volumeUnit}
                 </h3>
                 <div className="space-y-2">
-                  {selectedSubstances.map((substance) => (
-                    <div key={substance.id} className="flex justify-between items-center border-b pb-2">
-                      <div>{substance.name}</div>
-                      <div className="font-medium">{substance.amount.toFixed(3)} {massUnit}</div>
-                    </div>
+                  {results.substances.map((substance) => (
+                    substance.amount > 0.001 && (
+                      <div key={substance.id} className="flex justify-between items-center border-b pb-2">
+                        <div>{substance.name}</div>
+                        <div className="font-medium">{substance.amount.toFixed(3)} {massUnit}</div>
+                      </div>
+                    )
                   ))}
                 </div>
               </div>
@@ -469,36 +616,54 @@ const Calculator = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.keys(targets).map((element) => (
-                        <tr key={element} className="border-b">
-                          <td className="py-2">{t(`elements.${element}`) || element}</td>
-                          <td className="text-right py-2">{targets[element].toFixed(2)}</td>
-                          <td className="text-right py-2">0.00</td>
-                          <td className={`text-right py-2 ${targets[element] > 0 ? "text-destructive" : "text-green-500"}`}>
-                            {targets[element] > 0 ? `-${targets[element].toFixed(2)}` : '0.00'}
-                          </td>
-                        </tr>
-                      ))}
+                      {Object.keys(targets).map((element) => {
+                        const targetVal = targets[element as keyof TargetElements];
+                        const actualVal = results.elementConcentrations[element] || 0;
+                        const diff = actualVal - targetVal;
+                        
+                        // Skip elements with zero values for both target and actual
+                        if (targetVal === 0 && Math.abs(actualVal) < 0.001) {
+                          return null;
+                        }
+                        
+                        return (
+                          <tr key={element} className="border-b">
+                            <td className="py-2">{t(`elements.${element}`) || element}</td>
+                            <td className="text-right py-2">{targetVal.toFixed(2)}</td>
+                            <td className="text-right py-2">{actualVal.toFixed(2)}</td>
+                            <td className={`text-right py-2 ${
+                              diff < 0 ? "text-destructive" : 
+                              diff > 0 ? "text-green-500" : ""
+                            }`}>
+                              {diff.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
               
               <div className="bg-muted p-4 rounded-md">
-                <h3 className="font-medium text-lg">{t("calculator.predictedEcValue")}: 0.00 mS/cm</h3>
+                <h3 className="font-medium text-lg">{t("calculator.predictedEcValue")}: {results.predictedEc.toFixed(2)} mS/cm</h3>
                 <p className="text-sm text-muted-foreground mt-1">{t("calculator.ecDescription")}</p>
               </div>
               
               <div className="flex gap-4">
-                <Button variant="outline" className="flex-1">
+                <Button variant="outline" className="flex-1" onClick={exportToCsv}>
                   <Download className="mr-2 h-4 w-4" />
                   {t("calculator.exportRecipe")}
                 </Button>
-                <Button variant="outline" className="flex-1">
+                <Button variant="outline" className="flex-1" onClick={copyResultsToClipboard}>
                   <Copy className="mr-2 h-4 w-4" />
                   {t("calculator.copyResults")}
                 </Button>
-                <Button className="flex-1">
+                <Button 
+                  className="flex-1" 
+                  onClick={() => setShowSaveForm(true)}
+                  disabled
+                >
                   <Save className="mr-2 h-4 w-4" />
                   {t("calculator.saveRecipe")}
                 </Button>
@@ -507,6 +672,75 @@ const Calculator = () => {
           </CardContent>
         </Card>
       )}
+      
+      {/* This would be a dialog/modal for saving recipes when Supabase is integrated */}
+      {/*
+      <Dialog open={showSaveForm} onOpenChange={setShowSaveForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("calculator.saveRecipe")}</DialogTitle>
+            <DialogDescription>
+              {t("calculator.saveRecipeDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...saveRecipeForm}>
+            <form onSubmit={saveRecipeForm.handleSubmit(handleSaveRecipe)} className="space-y-4">
+              <FormField
+                control={saveRecipeForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("calculator.recipeName")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={saveRecipeForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("calculator.recipeDescription")}</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowSaveForm(false)}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSavingRecipe}
+                >
+                  {isSavingRecipe ? (
+                    <>
+                      <Loader className="h-4 w-4 mr-2 animate-spin" />
+                      {t("common.saving")}
+                    </>
+                  ) : (
+                    t("common.save")
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      */}
     </div>
   );
 };

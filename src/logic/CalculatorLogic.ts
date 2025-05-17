@@ -76,16 +76,40 @@ export class CalculatorLogic {
       // Create the target vector B
       const B = activeTargets;
       
-      // Solve the system AX = B
-      // In a real implementation, we would handle underdetermined and overdetermined systems
-      // Here we just use a placeholder solution
       console.log("Solving system with A:", A, "B:", B);
       
-      // This would be the actual solving, but for now we'll just use placeholders
-      // const X = math.lusolve(A, B);
+      // Validate matrix to ensure no NaN or all zero rows/columns
+      this.validateMatrix(A);
       
-      // Mock solution - in a real implementation, use the result of math.lusolve
-      const X = substances.map(() => [Math.random() * 0.5 + 0.1]);
+      let X;
+      
+      // Check if system is determined, underdetermined, or overdetermined
+      if (A.length === substances.length) {
+        // Determined system: A is square
+        X = math.lusolve(A, B);
+      } else if (A.length < substances.length) {
+        // Underdetermined system: more substances than constraints
+        // Use the pseudo-inverse to find a minimum norm solution
+        const AT = math.transpose(A);
+        const AAT = math.multiply(A, AT);
+        const AATinv = math.inv(AAT);
+        const Adag = math.multiply(AT, AATinv);
+        X = math.multiply(Adag, B);
+        
+        // Convert to column vector format
+        X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+      } else {
+        // Overdetermined system: more constraints than substances
+        // Use the pseudo-inverse to find a least squares solution
+        const AT = math.transpose(A);
+        const ATA = math.multiply(AT, A);
+        const ATAinv = math.inv(ATA);
+        const Adag = math.multiply(ATAinv, AT);
+        X = math.multiply(Adag, B);
+        
+        // Convert to column vector format
+        X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+      }
       
       // Update substances with calculated amounts
       const calculatedSubstances = substances.map((substance, index) => ({
@@ -95,16 +119,48 @@ export class CalculatorLogic {
       
       // Calculate actual element concentrations based on solution
       const actualConcentrations: Record<Element, number> = {} as Record<Element, number>;
-      activeElements.forEach(element => {
-        actualConcentrations[element] = calculatedSubstances.reduce(
-          (sum, substance) => sum + (substance.amount || 0) * (substance.elements[element] || 0) / volumeInLiters,
-          0
-        );
+      
+      // Initialize all elements in target concentrations
+      Object.keys(targetConcentrations).forEach(element => {
+        actualConcentrations[element as Element] = 0;
       });
       
-      // Calculate predicted EC (very simplified model)
-      // In reality, EC calculation is more complex and depends on the specific ions
-      const predictedEc = Object.values(actualConcentrations).reduce((sum, concentration) => sum + concentration, 0) * 0.0015;
+      // Calculate the actual concentrations from the solution
+      calculatedSubstances.forEach(substance => {
+        Object.entries(substance.elements).forEach(([element, percentage]) => {
+          if (!actualConcentrations[element as Element]) {
+            actualConcentrations[element as Element] = 0;
+          }
+          
+          actualConcentrations[element as Element] += 
+            (substance.amount || 0) * percentage / volumeInLiters;
+        });
+      });
+      
+      // Calculate predicted EC (more accurate model based on ion contributions)
+      // This is a simplified model - actual EC depends on specific ions
+      const elementContributions: Record<Element, number> = {
+        "N(NO3-)": 0.0071,
+        "N(NH4+)": 0.0074,
+        "P": 0.0032,
+        "K": 0.0020,
+        "Ca": 0.0044,
+        "Mg": 0.0074,
+        "S": 0.0080,
+        "Fe": 0.0036,
+        "Mn": 0.0037,
+        "Zn": 0.0031,
+        "B": 0.0000, // Very low contribution
+        "Cu": 0.0032,
+        "Si": 0.0000, // Very low contribution
+        "Mo": 0.0021,
+        "Na": 0.0043,
+        "Cl": 0.0028
+      };
+      
+      const predictedEc = Object.entries(actualConcentrations).reduce((sum, [element, concentration]) => {
+        return sum + concentration * (elementContributions[element as Element] || 0);
+      }, 0);
       
       return {
         substances: calculatedSubstances,
@@ -114,6 +170,41 @@ export class CalculatorLogic {
     } catch (error) {
       console.error("Error in nutrient solution calculation:", error);
       throw new Error(`Failed to calculate nutrient solution: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Validates matrix to ensure it's suitable for solving
+   */
+  private validateMatrix(A: number[][]) {
+    // Check for NaN values
+    for (let i = 0; i < A.length; i++) {
+      for (let j = 0; j < A[i].length; j++) {
+        if (isNaN(A[i][j])) {
+          throw new Error(`Matrix contains NaN values at position [${i}, ${j}]`);
+        }
+      }
+    }
+    
+    // Check for all-zero rows
+    for (let i = 0; i < A.length; i++) {
+      if (A[i].every(val => val === 0)) {
+        throw new Error(`Matrix contains an all-zero row at row ${i}`);
+      }
+    }
+    
+    // Check for all-zero columns
+    for (let j = 0; j < A[0].length; j++) {
+      let allZero = true;
+      for (let i = 0; i < A.length; i++) {
+        if (A[i][j] !== 0) {
+          allZero = false;
+          break;
+        }
+      }
+      if (allZero) {
+        throw new Error(`Matrix contains an all-zero column at column ${j}`);
+      }
     }
   }
   

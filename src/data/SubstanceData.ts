@@ -10,7 +10,7 @@ export interface SubstanceData {
   user_id?: string;
 }
 
-// This is a subset of the 24 standard HydroBuddy salts
+// This is the full set of 24 standard HydroBuddy salts
 export const STANDARD_SUBSTANCES: SubstanceData[] = [
   {
     id: "1",
@@ -116,6 +116,113 @@ export const STANDARD_SUBSTANCES: SubstanceData[] = [
     elements: {
       "Mg": 9.9,
       "S": 13.0,
+    } as Record<Element, number>
+  },
+  {
+    id: "13",
+    name: "Manganese Sulfate",
+    formula: "MnSO4·H2O",
+    elements: {
+      "Mn": 32.3,
+      "S": 19.0,
+    } as Record<Element, number>
+  },
+  {
+    id: "14",
+    name: "Monopotassium Phosphate",
+    formula: "KH2PO4",
+    elements: {
+      "K": 28.7,
+      "P": 22.8,
+    } as Record<Element, number>
+  },
+  {
+    id: "15",
+    name: "Potassium Chloride",
+    formula: "KCl",
+    elements: {
+      "K": 52.4,
+      "Cl": 47.6,
+    } as Record<Element, number>
+  },
+  {
+    id: "16",
+    name: "Potassium Nitrate",
+    formula: "KNO3",
+    elements: {
+      "N(NO3-)": 13.9,
+      "K": 38.6,
+    } as Record<Element, number>
+  },
+  {
+    id: "17",
+    name: "Potassium Sulfate",
+    formula: "K2SO4",
+    elements: {
+      "K": 44.9,
+      "S": 18.4,
+    } as Record<Element, number>
+  },
+  {
+    id: "18",
+    name: "Sodium Molybdate",
+    formula: "Na2MoO4·2H2O",
+    elements: {
+      "Mo": 39.6,
+      "Na": 9.6,
+    } as Record<Element, number>
+  },
+  {
+    id: "19",
+    name: "Sodium Silicate",
+    formula: "Na2SiO3·9H2O",
+    elements: {
+      "Si": 6.7,
+      "Na": 10.0,
+    } as Record<Element, number>
+  },
+  {
+    id: "20",
+    name: "Urea",
+    formula: "CO(NH2)2",
+    elements: {
+      "N(NH4+)": 46.6,
+    } as Record<Element, number>
+  },
+  {
+    id: "21",
+    name: "Zinc Sulfate",
+    formula: "ZnSO4·7H2O",
+    elements: {
+      "Zn": 22.7,
+      "S": 11.2,
+    } as Record<Element, number>
+  },
+  {
+    id: "22",
+    name: "Calcium Sulfate",
+    formula: "CaSO4·2H2O",
+    elements: {
+      "Ca": 23.3,
+      "S": 18.6,
+    } as Record<Element, number>
+  },
+  {
+    id: "23",
+    name: "Potassium Dibasic Phosphate",
+    formula: "K2HPO4",
+    elements: {
+      "K": 44.9,
+      "P": 17.8,
+    } as Record<Element, number>
+  },
+  {
+    id: "24",
+    name: "Calcium Chloride Anhydrous",
+    formula: "CaCl2",
+    elements: {
+      "Ca": 36.1,
+      "Cl": 63.9,
     } as Record<Element, number>
   }
 ];
