@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -79,9 +80,12 @@ const PlantEdit = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Fix: Check that reader.result is a string before updating state
         if (typeof reader.result === 'string') {
           setUploadedImage(reader.result);
           setFormData(prev => ({ ...prev, image: reader.result }));
+        } else {
+          console.error("Error: Image data is not a string");
         }
       };
       reader.readAsDataURL(file);
