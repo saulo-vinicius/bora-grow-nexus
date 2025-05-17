@@ -31,6 +31,7 @@ export interface CalculationResult {
   substances: Substance[];
   elementConcentrations: Record<Element, number>;
   predictedEc: number;
+  messages?: string[];
 }
 
 export class CalculatorLogic {
@@ -47,6 +48,7 @@ export class CalculatorLogic {
       // Filter out zero target concentrations
       const activeElements: Element[] = [];
       const activeTargets: number[] = [];
+      const messages: string[] = [];
       
       Object.entries(targetConcentrations).forEach(([element, concentration]) => {
         if (concentration > 0) {
@@ -78,37 +80,70 @@ export class CalculatorLogic {
       
       console.log("Solving system with A:", A, "B:", B);
       
-      // Validate matrix to ensure no NaN or all zero rows/columns
-      this.validateMatrix(A);
+      // Filter out rows with all zeros and corresponding targets
+      const { filteredA, filteredB, removedElements } = this.filterZeroRows(A, B, activeElements);
+      
+      if (removedElements.length > 0) {
+        messages.push(`No substances provide these elements: ${removedElements.join(', ')}. Consider adding substances with these elements.`);
+      }
+      
+      if (filteredA.length === 0) {
+        throw new Error("All target elements have no corresponding substances. Select substances that provide your target elements.");
+      }
       
       let X;
       
       // Check if system is determined, underdetermined, or overdetermined
-      if (A.length === substances.length) {
+      if (filteredA.length === substances.length) {
         // Determined system: A is square
-        X = math.lusolve(A, B);
-      } else if (A.length < substances.length) {
+        X = math.lusolve(filteredA, filteredB);
+      } else if (filteredA.length < substances.length) {
         // Underdetermined system: more substances than constraints
         // Use the pseudo-inverse to find a minimum norm solution
-        const AT = math.transpose(A);
-        const AAT = math.multiply(A, AT);
-        const AATinv = math.inv(AAT);
-        const Adag = math.multiply(AT, AATinv);
-        X = math.multiply(Adag, B);
-        
-        // Convert to column vector format
-        X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+        try {
+          const AT = math.transpose(filteredA);
+          const AAT = math.multiply(filteredA, AT);
+          const AATinv = math.inv(AAT);
+          const Adag = math.multiply(AT, AATinv);
+          X = math.multiply(Adag, filteredB);
+          
+          // Convert to column vector format
+          X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+        } catch (err) {
+          messages.push("Using simplified calculation for underdetermined system.");
+          // Fallback to a simpler approach if matrix calculations fail
+          X = Array(substances.length).fill([0]);
+          // Distribute the target values evenly among substances that provide each element
+          activeElements.forEach((element, idx) => {
+            const substancesWithElement = substances
+              .map((s, i) => ({ index: i, percentage: s.elements[element] || 0 }))
+              .filter(s => s.percentage > 0);
+              
+            if (substancesWithElement.length > 0) {
+              const totalPercentage = substancesWithElement.reduce((sum, s) => sum + s.percentage, 0);
+              substancesWithElement.forEach(s => {
+                X[s.index][0] += (activeTargets[idx] * s.percentage / totalPercentage) / s.percentage;
+              });
+            }
+          });
+        }
       } else {
         // Overdetermined system: more constraints than substances
-        // Use the pseudo-inverse to find a least squares solution
-        const AT = math.transpose(A);
-        const ATA = math.multiply(AT, A);
-        const ATAinv = math.inv(ATA);
-        const Adag = math.multiply(ATAinv, AT);
-        X = math.multiply(Adag, B);
-        
-        // Convert to column vector format
-        X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+        try {
+          // Use the pseudo-inverse to find a least squares solution
+          const AT = math.transpose(filteredA);
+          const ATA = math.multiply(AT, filteredA);
+          const ATAinv = math.inv(ATA);
+          const Adag = math.multiply(ATAinv, AT);
+          X = math.multiply(Adag, filteredB);
+          
+          // Convert to column vector format
+          X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+          
+          messages.push("Using least squares solution for overdetermined system.");
+        } catch (err) {
+          throw new Error("Failed to calculate least squares solution: " + err.message);
+        }
       }
       
       // Update substances with calculated amounts
@@ -165,7 +200,8 @@ export class CalculatorLogic {
       return {
         substances: calculatedSubstances,
         elementConcentrations: actualConcentrations,
-        predictedEc
+        predictedEc,
+        messages
       };
     } catch (error) {
       console.error("Error in nutrient solution calculation:", error);
@@ -174,7 +210,28 @@ export class CalculatorLogic {
   }
   
   /**
+   * Filters out zero rows from the coefficient matrix and corresponding targets
+   */
+  private filterZeroRows(A: number[][], B: number[], elements: Element[]) {
+    const filteredA: number[][] = [];
+    const filteredB: number[] = [];
+    const removedElements: Element[] = [];
+    
+    A.forEach((row, rowIndex) => {
+      if (!row.every(val => val === 0)) {
+        filteredA.push(row);
+        filteredB.push(B[rowIndex]);
+      } else {
+        removedElements.push(elements[rowIndex]);
+      }
+    });
+    
+    return { filteredA, filteredB, removedElements };
+  }
+  
+  /**
    * Validates matrix to ensure it's suitable for solving
+   * Now only checks for NaN values and all-zero columns
    */
   private validateMatrix(A: number[][]) {
     // Check for NaN values
@@ -186,24 +243,17 @@ export class CalculatorLogic {
       }
     }
     
-    // Check for all-zero rows
-    for (let i = 0; i < A.length; i++) {
-      if (A[i].every(val => val === 0)) {
-        throw new Error(`Matrix contains an all-zero row at row ${i}`);
-      }
-    }
-    
     // Check for all-zero columns
-    for (let j = 0; j < A[0].length; j++) {
+    for (let j = 0; j < (A[0]?.length || 0); j++) {
       let allZero = true;
       for (let i = 0; i < A.length; i++) {
-        if (A[i][j] !== 0) {
+        if (A[i]?.[j] !== 0) {
           allZero = false;
           break;
         }
       }
       if (allZero) {
-        throw new Error(`Matrix contains an all-zero column at column ${j}`);
+        throw new Error(`Matrix contains an all-zero column at column ${j}. This substance doesn't contribute to any target element.`);
       }
     }
   }

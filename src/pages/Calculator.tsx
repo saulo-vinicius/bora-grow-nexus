@@ -18,15 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, X, Plus, FileText, Copy, Download, Save, Loader } from "lucide-react";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { Loader } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CalculatorLogic, type Element } from "@/logic/CalculatorLogic";
-import { STANDARD_SUBSTANCES } from "@/data/SubstanceData";
+import { STANDARD_SUBSTANCES, SubstanceData } from "@/data/SubstanceData";
+import SubstanceSelectionPanel from "@/components/SubstanceSelectionPanel";
+import CalculationResults from "@/components/CalculationResults";
 // import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 // Define interface for targets to fix TypeScript errors
 interface TargetElements {
@@ -57,13 +56,13 @@ const DEFAULT_TARGETS = {
     Ca: 242,
     Mg: 60,
     S: 132,
-    Fe: 0,
-    Mn: 0,
-    Zn: 0,
-    B: 0,
-    Cu: 0,
+    Fe: 2,
+    Mn: 0.5,
+    Zn: 0.3,
+    B: 0.3,
+    Cu: 0.1,
     Si: 0,
-    Mo: 0,
+    Mo: 0.05,
     Na: 0,
     Cl: 0
   } as TargetElements,
@@ -75,25 +74,17 @@ const DEFAULT_TARGETS = {
     Ca: 200,
     Mg: 55,
     S: 120,
-    Fe: 0,
-    Mn: 0,
-    Zn: 0,
-    B: 0,
-    Cu: 0,
+    Fe: 2,
+    Mn: 0.5,
+    Zn: 0.3,
+    B: 0.3,
+    Cu: 0.1,
     Si: 0,
-    Mo: 0,
+    Mo: 0.05,
     Na: 0,
     Cl: 0
   } as TargetElements
 };
-
-// Save recipe form schema
-const saveRecipeSchema = z.object({
-  name: z.string().min(1, "Nome da receita é obrigatório"),
-  description: z.string().optional(),
-});
-
-type SaveRecipeForm = z.infer<typeof saveRecipeSchema>;
 
 const Calculator = () => {
   const { t } = useTranslation();
@@ -104,8 +95,8 @@ const Calculator = () => {
   const [targetMode, setTargetMode] = useState<"veg" | "flowering">("veg");
   const [targets, setTargets] = useState<TargetElements>({ ...DEFAULT_TARGETS.veg });
   
-  const [selectedSubstances, setSelectedSubstances] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [availableSubstances, setAvailableSubstances] = useState<SubstanceData[]>(STANDARD_SUBSTANCES);
+  const [selectedSubstances, setSelectedSubstances] = useState<SubstanceData[]>([]);
   
   // Results state
   const [results, setResults] = useState<any>(null);
@@ -116,19 +107,6 @@ const Calculator = () => {
   const [isSavingRecipe, setIsSavingRecipe] = useState<boolean>(false);
   const [showSaveForm, setShowSaveForm] = useState<boolean>(false);
   
-  const filteredSubstances = STANDARD_SUBSTANCES.filter(substance => 
-    substance.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  // Initialize save recipe form
-  const saveRecipeForm = useForm<SaveRecipeForm>({
-    resolver: zodResolver(saveRecipeSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
-  });
-
   // This function will be called when we want to load custom substances from Supabase
   const loadCustomSubstances = async () => {
     try {
@@ -145,14 +123,31 @@ const Calculator = () => {
       //   custom: true,
       // }));
       //
-      // setAllSubstances([...STANDARD_SUBSTANCES, ...customSubstances]);
+      // setAvailableSubstances([...STANDARD_SUBSTANCES, ...customSubstances]);
     } catch (error) {
       console.error("Error loading custom substances:", error);
       // Fall back to standard substances
+      setAvailableSubstances(STANDARD_SUBSTANCES);
     }
   };
   
-  const selectSubstance = (substance: any) => {
+  const addCustomSubstance = (substance: SubstanceData) => {
+    // In a real implementation, this would save to Supabase
+    // try {
+    //   const { error } = await supabase.from('substances').insert({
+    //     ...substance,
+    //     user_id: auth.user()?.id
+    //   });
+    //   if (error) throw error;
+    // } catch (error) {
+    //   console.error('Error saving custom substance:', error);
+    // }
+    
+    // For now, just add to local state
+    setAvailableSubstances(prev => [...prev, substance]);
+  };
+  
+  const selectSubstance = (substance: SubstanceData) => {
     if (!selectedSubstances.find(s => s.id === substance.id)) {
       setSelectedSubstances([...selectedSubstances, { ...substance, amount: 0 }]);
     }
@@ -187,6 +182,16 @@ const Calculator = () => {
       setIsCalculating(true);
       setCalculationError(null);
       
+      // Make sure we have at least one substance and one target
+      if (selectedSubstances.length === 0) {
+        throw new Error(t("calculator.errors.noSubstancesSelected"));
+      }
+      
+      const hasTargets = Object.values(targets).some(value => value > 0);
+      if (!hasTargets) {
+        throw new Error(t("calculator.errors.noTargetsSpecified"));
+      }
+      
       const calculator = new CalculatorLogic();
       const calculationResults = calculator.calculateNutrientSolution(
         selectedSubstances,
@@ -200,11 +205,11 @@ const Calculator = () => {
       setResults(calculationResults);
     } catch (error) {
       console.error("Calculation error:", error);
-      setCalculationError(`Erro no cálculo: ${error.message}`);
+      setCalculationError(`${t("calculator.errors.calculationError")}: ${error.message}`);
       setResults(null);
       
       toast({
-        title: "Erro no cálculo",
+        title: t("calculator.errors.calculationError"),
         description: error.message,
         variant: "destructive",
       });
@@ -223,45 +228,9 @@ const Calculator = () => {
     setSelectedSubstances(updatedSubstances);
   };
   
-  const handleSaveRecipe = async (data: SaveRecipeForm) => {
-    // In a real application, this would save to Supabase
-    // const { name, description } = data;
-    
-    try {
-      setIsSavingRecipe(true);
-      
-      // This would be implemented when Supabase is integrated
-      // const { error } = await supabase
-      //   .from('recipes')
-      //   .insert({
-      //     user_id: auth.user()?.id,
-      //     name,
-      //     description,
-      //     target_elements: targets,
-      //     solution_substances: selectedSubstances,
-      //     volume: solutionVolume,
-      //     volume_unit: volumeUnit,
-      //   });
-      //
-      // if (error) throw error;
-      
-      toast({
-        title: "Receita salva",
-        description: "Sua receita foi salva com sucesso.",
-      });
-      
-      setShowSaveForm(false);
-    } catch (error) {
-      console.error("Error saving recipe:", error);
-      
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar a receita.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingRecipe(false);
-    }
+  const handleSaveRecipe = () => {
+    // This would be implemented when Supabase is integrated
+    setShowSaveForm(true);
   };
   
   const exportToCsv = () => {
@@ -273,14 +242,19 @@ const Calculator = () => {
     Object.keys(targets).forEach((element) => {
       const targetValue = targets[element as keyof TargetElements];
       const actualValue = results.elementConcentrations[element] || 0;
-      const difference = actualValue - targetValue;
       
+      // Skip elements with zero values for both target and actual
+      if (targetValue === 0 && Math.abs(actualValue) < 0.001) {
+        return;
+      }
+      
+      const difference = actualValue - targetValue;
       csvContent += `${element},${targetValue.toFixed(2)},${actualValue.toFixed(2)},${difference.toFixed(2)}\n`;
     });
     
-    csvContent += "\nSubstância,Quantidade (${massUnit})\n";
+    csvContent += `\nSubstância,Quantidade (${massUnit})\n`;
     
-    results.substances.forEach((substance) => {
+    results.substances.forEach((substance: any) => {
       if (substance.amount > 0.001) {
         csvContent += `${substance.name},${substance.amount.toFixed(3)}\n`;
       }
@@ -298,6 +272,11 @@ const Calculator = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast({
+      title: t("calculator.exportSuccessful"),
+      description: t("calculator.fileDownloaded"),
+    });
   };
   
   const copyResultsToClipboard = () => {
@@ -307,7 +286,7 @@ const Calculator = () => {
     text += `Volume: ${solutionVolume} ${volumeUnit}\n\n`;
     
     text += `Substâncias:\n`;
-    results.substances.forEach((substance) => {
+    results.substances.forEach((substance: any) => {
       if (substance.amount > 0.001) {
         text += `${substance.name}: ${substance.amount.toFixed(3)} ${massUnit}\n`;
       }
@@ -328,14 +307,14 @@ const Calculator = () => {
     navigator.clipboard.writeText(text)
       .then(() => {
         toast({
-          title: "Copiado para a área de transferência",
-          description: "Os resultados foram copiados.",
+          title: t("calculator.copiedToClipboard"),
+          description: t("calculator.resultsCopied"),
         });
       })
       .catch(() => {
         toast({
-          title: "Erro ao copiar",
-          description: "Não foi possível copiar os resultados.",
+          title: t("calculator.copyError"),
+          description: t("calculator.couldNotCopy"),
           variant: "destructive",
         });
       });
@@ -347,15 +326,15 @@ const Calculator = () => {
   }, []);
   
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto pb-8">
       <h1 className="text-3xl font-bold mb-6">{t("calculator.title")}</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Solution Settings & Target Concentrations */}
-        <div className="space-y-6 md:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="solution-volume">{t("calculator.solutionVolume")}</Label>
                   <div className="flex mt-1">
@@ -396,7 +375,7 @@ const Calculator = () => {
             </CardHeader>
           </Card>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button 
               variant={targetMode === "veg" ? "default" : "outline"}
               onClick={() => loadDefaultTargets("veg")}
@@ -421,7 +400,7 @@ const Calculator = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Object.keys(targets).map((element) => (
                   <div key={element}>
                     <Label htmlFor={`target-${element}`}>{t(`elements.${element}`) || element}</Label>
@@ -443,104 +422,15 @@ const Calculator = () => {
         
         {/* Right Column: Substance Selection */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>{t("calculator.substanceDatabase")}</CardTitle>
-                <Button size="sm" disabled>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t("calculator.addCustom")}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("calculator.search")}
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <div className="mt-4 space-y-3 max-h-[300px] overflow-y-auto">
-                {filteredSubstances.map((substance) => (
-                  <div key={substance.id} className="border rounded-md p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-medium">{substance.name}</h4>
-                        <p className="text-sm text-muted-foreground">{substance.formula}</p>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => selectSubstance(substance)}
-                        disabled={selectedSubstances.some(s => s.id === substance.id)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="mt-2 space-x-2">
-                      {Object.entries(substance.elements).map(([element, percentage]) => (
-                        <span key={element} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted">
-                          {element}: {percentage}%
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredSubstances.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">
-                    No substances found
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("calculator.substanceSelection")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {selectedSubstances.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    No substances selected
-                  </p>
-                ) : (
-                  selectedSubstances.map((substance) => (
-                    <div key={substance.id} className="border rounded-md p-3">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium">{substance.name}</h4>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => removeSubstance(substance.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="mt-2">
-                        <Label htmlFor={`amount-${substance.id}`}>{massUnit}</Label>
-                        <Input
-                          id={`amount-${substance.id}`}
-                          type="number"
-                          value={substance.amount?.toFixed(3) || 0}
-                          onChange={(e) => handleSubstanceAmountChange(substance.id, e.target.value)}
-                          min="0"
-                          step="0.001"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <SubstanceSelectionPanel
+            substances={availableSubstances}
+            selectedSubstances={selectedSubstances}
+            onSelectSubstance={selectSubstance}
+            onRemoveSubstance={removeSubstance}
+            onSubstanceAmountChange={handleSubstanceAmountChange}
+            massUnit={massUnit}
+            addCustomSubstance={addCustomSubstance}
+          />
           
           <div className="flex gap-4">
             <Button 
@@ -579,98 +469,16 @@ const Calculator = () => {
       )}
       
       {results && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>{t("calculator.results")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-medium text-lg mb-2">
-                  {t("calculator.substanceWeights")} {solutionVolume} {volumeUnit}
-                </h3>
-                <div className="space-y-2">
-                  {results.substances.map((substance) => (
-                    substance.amount > 0.001 && (
-                      <div key={substance.id} className="flex justify-between items-center border-b pb-2">
-                        <div>{substance.name}</div>
-                        <div className="font-medium">{substance.amount.toFixed(3)} {massUnit}</div>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="font-medium text-lg mb-2">
-                  {t("calculator.elementConcentrations")}
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">{t("calculator.element")}</th>
-                        <th className="text-right py-2">{t("calculator.target")} (ppm)</th>
-                        <th className="text-right py-2">{t("calculator.actual")} (ppm)</th>
-                        <th className="text-right py-2">{t("calculator.difference")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.keys(targets).map((element) => {
-                        const targetVal = targets[element as keyof TargetElements];
-                        const actualVal = results.elementConcentrations[element] || 0;
-                        const diff = actualVal - targetVal;
-                        
-                        // Skip elements with zero values for both target and actual
-                        if (targetVal === 0 && Math.abs(actualVal) < 0.001) {
-                          return null;
-                        }
-                        
-                        return (
-                          <tr key={element} className="border-b">
-                            <td className="py-2">{t(`elements.${element}`) || element}</td>
-                            <td className="text-right py-2">{targetVal.toFixed(2)}</td>
-                            <td className="text-right py-2">{actualVal.toFixed(2)}</td>
-                            <td className={`text-right py-2 ${
-                              diff < 0 ? "text-destructive" : 
-                              diff > 0 ? "text-green-500" : ""
-                            }`}>
-                              {diff.toFixed(2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              
-              <div className="bg-muted p-4 rounded-md">
-                <h3 className="font-medium text-lg">{t("calculator.predictedEcValue")}: {results.predictedEc.toFixed(2)} mS/cm</h3>
-                <p className="text-sm text-muted-foreground mt-1">{t("calculator.ecDescription")}</p>
-              </div>
-              
-              <div className="flex gap-4">
-                <Button variant="outline" className="flex-1" onClick={exportToCsv}>
-                  <Download className="mr-2 h-4 w-4" />
-                  {t("calculator.exportRecipe")}
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={copyResultsToClipboard}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  {t("calculator.copyResults")}
-                </Button>
-                <Button 
-                  className="flex-1" 
-                  onClick={() => setShowSaveForm(true)}
-                  disabled
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {t("calculator.saveRecipe")}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <CalculationResults
+          results={results}
+          targets={targets}
+          solutionVolume={solutionVolume}
+          volumeUnit={volumeUnit}
+          massUnit={massUnit}
+          onSaveClick={handleSaveRecipe}
+          exportToCsv={exportToCsv}
+          copyResultsToClipboard={copyResultsToClipboard}
+        />
       )}
       
       {/* This would be a dialog/modal for saving recipes when Supabase is integrated */}
