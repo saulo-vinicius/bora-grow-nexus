@@ -10,6 +10,7 @@ import { SubstanceData } from "@/data/SubstanceData";
 import { Element } from "@/logic/CalculatorLogic";
 import CustomSubstanceForm from './CustomSubstanceForm';
 import { toast } from "@/hooks/use-toast";
+import { getElementBgClass } from "@/lib/ElementUtils";
 
 interface SubstanceSelectionPanelProps {
   substances: SubstanceData[];
@@ -108,7 +109,10 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
                 </div>
                 <div className="mt-2 space-x-2 flex flex-wrap gap-1">
                   {Object.entries(substance.elements).map(([element, percentage]) => (
-                    <span key={element} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted">
+                    <span 
+                      key={element} 
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${getElementBgClass(element as Element)}`}
+                    >
                       {element}: {percentage}%
                     </span>
                   ))}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -80,8 +79,10 @@ const PlantEdit = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setUploadedImage(reader.result);
-        setFormData(prev => ({ ...prev, image: reader.result }));
+        if (typeof reader.result === 'string') {
+          setUploadedImage(reader.result);
+          setFormData(prev => ({ ...prev, image: reader.result }));
+        }
       };
       reader.readAsDataURL(file);
     }

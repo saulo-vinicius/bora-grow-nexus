@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,6 +32,7 @@ const plantSchema = z.object({
   lightType: z.string().min(1, { message: "Light type is required" }),
   currentStage: z.string().min(1, { message: "Current stage is required" }),
   germDate: z.string().min(1, { message: "Germination date is required" }),
+  image: z.string().optional(),
 });
 
 type PlantFormValues = z.infer<typeof plantSchema>;
@@ -74,6 +74,7 @@ const PlantEditForm: React.FC<PlantEditFormProps> = ({
       lightType: plant?.lightType || '',
       currentStage: plant?.currentStage || '',
       germDate: plant?.germDate ? plant.germDate.split('T')[0] : '',
+      image: plant?.image || '',
     }
   });
 
@@ -256,6 +257,19 @@ const PlantEditForm: React.FC<PlantEditFormProps> = ({
             )}
           />
         </div>
+        
+        {/* Hidden image field */}
+        <FormField
+          control={form.control}
+          name="image"
+          render={({ field }) => (
+            <FormItem className="hidden">
+              <FormControl>
+                <Input type="hidden" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
         
         <div className="flex justify-end space-x-2 pt-4">
           <Button variant="outline" type="button" onClick={onCancel}>

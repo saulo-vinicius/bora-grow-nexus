@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getElementBgClass } from "@/lib/ElementUtils";
 
 interface CalculationResultsProps {
   results: any;
@@ -147,12 +148,17 @@ const CalculationResults: React.FC<CalculationResultsProps> = ({
                         return null;
                       }
                       
+                      // Get background class for this element
+                      const bgClass = getElementBgClass(element as Element);
+                      
                       return (
                         <tr key={element} className="border-b">
-                          <td className="py-2">{t(`elements.${element}`) || element}</td>
+                          <td className={`py-2 px-2 rounded-l-md ${bgClass}`}>
+                            {t(`elements.${element}`) || element}
+                          </td>
                           <td className="text-right py-2">{targetVal.toFixed(2)}</td>
                           <td className="text-right py-2">{actualVal.toFixed(2)}</td>
-                          <td className={`text-right py-2 ${
+                          <td className={`text-right py-2 rounded-r-md ${
                             Math.abs(diff) < 0.01 ? "text-green-500" :
                             diff < 0 ? "text-red-500" : 
                             diff > 0 ? "text-amber-500" : ""

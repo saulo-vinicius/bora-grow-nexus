@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -76,7 +75,9 @@ const Recipes = () => {
     
     csvContent += "\nElement,PPM\n";
     Object.entries(recipe.elementConcentrations).forEach(([element, value]) => {
-      csvContent += `${element},${value}\n`;
+      if (typeof value === 'number') {
+        csvContent += `${element},${value}\n`;
+      }
     });
     
     // Create download link and trigger download
@@ -231,14 +232,19 @@ const Recipes = () => {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(recipe.elementConcentrations).map(([element, value]) => {
                       // Skip elements with zero or very small values
-                      if (Math.abs(value) < 0.01) return null;
+                      // Explicitly type check the value
+                      const numValue = typeof value === 'number' ? value : 0;
+                      if (Math.abs(numValue) < 0.01) return null;
+                      
+                      // Convert element to string if it's not already
+                      const elementKey = String(element);
                       
                       return (
                         <span 
-                          key={element} 
+                          key={elementKey} 
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted"
                         >
-                          {t(`elements.${element}`) || element}: {parseFloat(value).toFixed(1)}
+                          {t(`elements.${elementKey}`) || elementKey}: {parseFloat(String(numValue)).toFixed(1)}
                         </span>
                       );
                     })}
