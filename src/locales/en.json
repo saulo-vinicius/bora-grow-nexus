@@ -30,6 +30,7 @@
     "substanceSelection": "Substance Selection",
     "substanceDatabase": "Substance Database",
     "addCustom": "Add Custom",
+    "addCustomSubstance": "Add Custom Substance",
     "search": "Search substances...",
     "calculate": "Calculate Nutrient Solution",
     "clearValues": "Clear Values",
@@ -47,7 +48,8 @@
     "ecDescription": "Electrical Conductivity (EC) is an estimate based on total dissolved nutrients",
     "exportRecipe": "Export Recipe (CSV)",
     "copyResults": "Copy Results",
-    "saveRecipe": "Save Recipe"
+    "saveRecipe": "Save Recipe",
+    "calculationNotes": "Calculation Notes"
   },
   "plants": {
     "title": "My Plants",
@@ -72,7 +74,15 @@
     "applyRecipe": "Apply Recipe",
     "viewDetails": "View Details",
     "deletePlant": "Delete Plant",
-    "confirmDelete": "Are you sure you want to delete this plant?"
+    "confirmDelete": "Are you sure you want to delete this plant?",
+    "editPlant": "Edit Plant",
+    "plantUpdated": "Plant updated successfully",
+    "updated": "Updated",
+    "notFound": "Plant not found",
+    "plantNotFound": "The plant you are looking for doesn't exist",
+    "deletedSuccessfully": "Plant deleted",
+    "plantHasBeenDeleted": "The plant has been successfully deleted",
+    "deleteWarning": "This action cannot be undone"
   },
   "recipes": {
     "title": "Nutrient Recipes",
@@ -85,7 +95,19 @@
     "lastUsed": "Last Used",
     "deleteRecipe": "Delete Recipe",
     "confirmDelete": "Are you sure you want to delete this recipe?",
-    "applyToPlant": "Apply to Plant"
+    "applyToPlant": "Apply to Plant",
+    "deleted": "Recipe deleted",
+    "recipeDeleted": "The recipe has been successfully deleted",
+    "copied": "Recipe copied",
+    "recipeCopiedToClipboard": "The recipe has been copied to clipboard",
+    "downloaded": "Recipe downloaded",
+    "recipeDownloaded": "The recipe has been downloaded as CSV",
+    "applyReady": "Ready to apply",
+    "selectPlantToApply": "Select a plant to apply this recipe to",
+    "navigateToPlants": "You will be redirected to the plants page to select a plant",
+    "goToPlants": "Go to Plants",
+    "saved": "Recipe saved",
+    "recipeSaved": "Your recipe has been saved successfully"
   },
   "profile": {
     "title": "Profile",
@@ -122,7 +144,8 @@
     "liters": "Liters (L)",
     "gallons": "Gallons (gal)",
     "free": "Free",
-    "premium": "Premium"
+    "premium": "Premium",
+    "view": "View"
   },
   "elements": {
     "N(NO3-)": "N (NO3-)",

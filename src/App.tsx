@@ -16,6 +16,7 @@ import PlantEdit from "./pages/PlantEdit";
 import Calculator from "./pages/Calculator";
 import Recipes from "./pages/Recipes";
 import Profile from "./pages/Profile";
+import Upgrade from "./pages/Upgrade";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/upgrade" element={<Upgrade />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

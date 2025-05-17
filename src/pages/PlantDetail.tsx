@@ -1,46 +1,139 @@
-import { useParams } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Edit, FileText } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-
-// Mock data - would come from Supabase in production
-const mockPlantDetails = {
-  id: "1",
-  name: "Northern Lights",
-  strain: "Northern Lights",
-  medium: "Soil",
-  environment: "Indoor",
-  potSize: "5 gal",
-  lightType: "LED",
-  currentStage: "Vegetative",
-  germDate: "2025-03-15",
-  lastUpdated: "2025-05-15T14:30:00Z",
-  image: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=800&h=600",
-  logs: [
-    { date: "May 10", temperature: 24, humidity: 60, ppm: 650 },
-    { date: "May 11", temperature: 25, humidity: 58, ppm: 655 },
-    { date: "May 12", temperature: 24, humidity: 59, ppm: 660 },
-    { date: "May 13", temperature: 26, humidity: 57, ppm: 670 },
-    { date: "May 14", temperature: 25, humidity: 61, ppm: 680 },
-    { date: "May 15", temperature: 24, humidity: 60, ppm: 685 },
-    { date: "May 16", temperature: 25, humidity: 59, ppm: 690 }
-  ],
-  recipes: [
-    { id: "1", name: "Veg Nutrient Mix", date: "May 13" },
-    { id: "2", name: "Micronutrient Boost", date: "May 15" }
-  ]
-};
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { getPlants, savePlants, getSavedRecipes } from "@/lib/localStorageUtils";
+import { formatDecimal, parseDecimalInput } from "@/lib/formatters";
 
 const PlantDetail = () => {
   const { plantId } = useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   
-  // In a real app, we'd fetch the plant details based on the plantId
-  const plant = mockPlantDetails;
+  const [plant, setPlant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [applyRecipeDialogOpen, setApplyRecipeDialogOpen] = useState(false);
+  const [recipes, setRecipes] = useState([]);
+  const [selectedRecipeId, setSelectedRecipeId] = useState(null);
+  
+  useEffect(() => {
+    // Load plant from localStorage
+    const plants = getPlants();
+    const foundPlant = plants.find(p => p.id === plantId);
+    
+    if (foundPlant) {
+      // Add logs if they don't exist
+      if (!foundPlant.logs) {
+        foundPlant.logs = [
+          { date: "May 10", temperature: 24, humidity: 60, ppm: 650 },
+          { date: "May 11", temperature: 25, humidity: 58, ppm: 655 },
+          { date: "May 12", temperature: 24, humidity: 59, ppm: 660 },
+          { date: "May 13", temperature: 26, humidity: 57, ppm: 670 },
+          { date: "May 14", temperature: 25, humidity: 61, ppm: 680 },
+          { date: "May 15", temperature: 24, humidity: 60, ppm: 685 },
+          { date: "May 16", temperature: 25, humidity: 59, ppm: 690 }
+        ];
+      }
+      
+      // Add recipes if they don't exist
+      if (!foundPlant.recipes) {
+        foundPlant.recipes = [];
+      }
+      
+      setPlant(foundPlant);
+    } else {
+      toast({
+        title: t("plants.notFound"),
+        description: t("plants.plantNotFound"),
+        variant: "destructive"
+      });
+      navigate("/plants");
+    }
+    
+    setLoading(false);
+    
+    // Load recipes
+    const savedRecipes = getSavedRecipes();
+    setRecipes(savedRecipes);
+  }, [plantId, navigate, t]);
+  
+  const handleApplyRecipe = () => {
+    setApplyRecipeDialogOpen(true);
+  };
+  
+  const confirmApplyRecipe = () => {
+    if (!selectedRecipeId) {
+      toast({
+        title: t("common.error"),
+        description: t("recipes.selectRecipe"),
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const recipe = recipes.find(r => r.id === selectedRecipeId);
+    if (recipe) {
+      const plants = getPlants();
+      const plantIndex = plants.findIndex(p => p.id === plantId);
+      
+      if (plantIndex !== -1) {
+        // Update the plant with the new recipe
+        if (!plants[plantIndex].recipes) {
+          plants[plantIndex].recipes = [];
+        }
+        
+        // Add recipe to plant's recipes
+        const recipeToAdd = {
+          id: recipe.id,
+          name: recipe.name,
+          date: new Date().toLocaleDateString()
+        };
+        
+        plants[plantIndex].recipes.unshift(recipeToAdd);
+        plants[plantIndex].lastUpdated = new Date().toISOString();
+        
+        // Update plant in localStorage
+        savePlants(plants);
+        
+        // Update local state
+        setPlant(plants[plantIndex]);
+        
+        // Close dialog and show success message
+        setApplyRecipeDialogOpen(false);
+        setSelectedRecipeId(null);
+        
+        toast({
+          title: t("common.success"),
+          description: t("recipes.recipeApplied")
+        });
+      }
+    }
+  };
+  
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-12 flex items-center justify-center">
+            <div className="animate-pulse">
+              {t("common.loading")}...
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  if (!plant) {
+    return null; // Should never reach here due to navigate in useEffect
+  }
   
   return (
     <div className="container mx-auto">
@@ -60,7 +153,11 @@ const PlantDetail = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>{plant.name}</CardTitle>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate(`/plants/${plant.id}/edit`)}
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
               </div>
@@ -89,7 +186,7 @@ const PlantDetail = () => {
                 <div>{new Date(plant.lastUpdated).toLocaleString()}</div>
               </div>
               
-              <Button className="w-full">
+              <Button className="w-full" onClick={handleApplyRecipe}>
                 {t("plants.applyRecipe")}
               </Button>
             </CardContent>
@@ -153,21 +250,29 @@ const PlantDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {plant.recipes.map((recipe) => (
-                      <div key={recipe.id} className="flex justify-between items-center p-4 border rounded-lg">
-                        <div className="flex items-center">
-                          <FileText className="mr-2 h-5 w-5" />
-                          <div>
-                            <p className="font-medium">{recipe.name}</p>
-                            <p className="text-sm text-muted-foreground">Applied: {recipe.date}</p>
+                    {plant.recipes && plant.recipes.length > 0 ? (
+                      plant.recipes.map((recipe) => (
+                        <div key={recipe.id} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div className="flex items-center">
+                            <FileText className="mr-2 h-5 w-5" />
+                            <div>
+                              <p className="font-medium">{recipe.name}</p>
+                              <p className="text-sm text-muted-foreground">Applied: {recipe.date}</p>
+                            </div>
                           </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to="/recipes">
+                              {t("common.view")}
+                            </Link>
+                          </Button>
                         </div>
-                        <Button variant="outline" size="sm">
-                          {t("common.view")}
-                        </Button>
+                      ))
+                    ) : (
+                      <div className="text-center p-4">
+                        <p className="text-muted-foreground">{t("recipes.noRecipesApplied")}</p>
                       </div>
-                    ))}
-                    <Button className="w-full">
+                    )}
+                    <Button className="w-full" onClick={handleApplyRecipe}>
                       {t("plants.applyRecipe")}
                     </Button>
                   </div>
@@ -177,6 +282,61 @@ const PlantDetail = () => {
           </Tabs>
         </div>
       </div>
+      
+      {/* Apply Recipe Dialog */}
+      <Dialog open={applyRecipeDialogOpen} onOpenChange={setApplyRecipeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("plants.applyRecipe")}</DialogTitle>
+            <DialogDescription>
+              {t("recipes.selectRecipeToApply")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {recipes.length > 0 ? (
+              <div className="space-y-2">
+                {recipes.map(recipe => (
+                  <div 
+                    key={recipe.id} 
+                    className={`p-3 border rounded-md cursor-pointer ${
+                      selectedRecipeId === recipe.id ? 'border-primary bg-primary/10' : ''
+                    }`}
+                    onClick={() => setSelectedRecipeId(recipe.id)}
+                  >
+                    <div className="font-medium">{recipe.name}</div>
+                    {recipe.description && (
+                      <div className="text-sm text-muted-foreground">{recipe.description}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4">
+                <p className="text-muted-foreground">{t("recipes.noRecipes")}</p>
+                <Button className="mt-4" asChild>
+                  <Link to="/calculator">
+                    {t("recipes.createRecipe")}
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setApplyRecipeDialogOpen(false);
+              setSelectedRecipeId(null);
+            }}>
+              {t("common.cancel")}
+            </Button>
+            <Button 
+              onClick={confirmApplyRecipe} 
+              disabled={!selectedRecipeId || recipes.length === 0}
+            >
+              {t("common.apply")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Card,
@@ -21,86 +21,31 @@ import {
   DialogDescription, 
   DialogFooter 
 } from "@/components/ui/dialog";
-
-// Mock recipes data - would come from Supabase in production
-const mockRecipes = [
-  {
-    id: "1",
-    name: "Veg Base Nutrient Mix",
-    description: "Standard nutrient solution for vegetative growth stage",
-    stage: "Vegetative",
-    lastUsed: "2025-05-10T10:30:00Z",
-    substances: [
-      { id: "1", name: "Calcium Nitrate", amount: 0.95 },
-      { id: "2", name: "Master Blend", amount: 0.6 },
-      { id: "3", name: "Magnesium Sulfate", amount: 0.6 },
-    ],
-    elements: {
-      "N(NO3-)": 199,
-      "N(NH4+)": 0,
-      P: 62,
-      K: 207,
-      Ca: 242,
-      Mg: 60,
-      S: 132
-    }
-  },
-  {
-    id: "2",
-    name: "Flowering Mix",
-    description: "Enhanced phosphorus and potassium for flowering stage",
-    stage: "Flowering",
-    lastUsed: "2025-05-15T14:45:00Z",
-    substances: [
-      { id: "1", name: "Calcium Nitrate", amount: 0.75 },
-      { id: "2", name: "Monopotassium Phosphate", amount: 0.7 },
-      { id: "3", name: "Magnesium Sulfate", amount: 0.5 },
-      { id: "4", name: "Potassium Sulfate", amount: 0.4 },
-    ],
-    elements: {
-      "N(NO3-)": 150,
-      "N(NH4+)": 0,
-      P: 100,
-      K: 300,
-      Ca: 200,
-      Mg: 55,
-      S: 120
-    }
-  },
-  {
-    id: "3",
-    name: "Micronutrient Boost",
-    description: "Supplementary mix for micronutrient deficiencies",
-    stage: "Any",
-    lastUsed: "2025-05-12T09:15:00Z",
-    substances: [
-      { id: "1", name: "Chelated Iron", amount: 0.05 },
-      { id: "2", name: "Manganese Sulfate", amount: 0.02 },
-      { id: "3", name: "Zinc Sulfate", amount: 0.01 },
-      { id: "4", name: "Borax", amount: 0.01 },
-      { id: "5", name: "Copper Sulfate", amount: 0.005 },
-    ],
-    elements: {
-      Fe: 5,
-      Mn: 2,
-      Zn: 1,
-      B: 1,
-      Cu: 0.5
-    }
-  },
-];
+import { getSavedRecipes, getPlants, savePlants } from "@/lib/localStorageUtils";
+import { Badge } from "@/components/ui/badge";
 
 const Recipes = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [recipes, setRecipes] = useState(mockRecipes);
-  const [deletingRecipeId, setDeletingRecipeId] = useState<string | null>(null);
-  const [applyingRecipeId, setApplyingRecipeId] = useState<string | null>(null);
+  const [recipes, setRecipes] = useState([]);
+  const [deletingRecipeId, setDeletingRecipeId] = useState(null);
+  const [applyingRecipeId, setApplyingRecipeId] = useState(null);
+  const [plants, setPlants] = useState([]);
+  const [selectedPlantId, setSelectedPlantId] = useState(null);
+  
+  // Load recipes and plants from localStorage
+  useEffect(() => {
+    const savedRecipes = getSavedRecipes();
+    setRecipes(savedRecipes);
+    
+    const savedPlants = getPlants();
+    setPlants(savedPlants);
+  }, []);
   
   const handleCopyRecipe = (recipe) => {
     // Create a text representation of the recipe
     let recipeText = `${recipe.name}\n`;
-    recipeText += `${recipe.description}\n\n`;
+    recipeText += `${recipe.description || ""}\n\n`;
     recipeText += `Stage: ${recipe.stage}\n\n`;
     
     recipeText += "Substances:\n";
@@ -109,7 +54,7 @@ const Recipes = () => {
     });
     
     recipeText += "\nElements (ppm):\n";
-    Object.entries(recipe.elements).forEach(([element, value]) => {
+    Object.entries(recipe.elementConcentrations).forEach(([element, value]) => {
       recipeText += `- ${element}: ${value}\n`;
     });
     
@@ -130,7 +75,7 @@ const Recipes = () => {
     });
     
     csvContent += "\nElement,PPM\n";
-    Object.entries(recipe.elements).forEach(([element, value]) => {
+    Object.entries(recipe.elementConcentrations).forEach(([element, value]) => {
       csvContent += `${element},${value}\n`;
     });
     
@@ -151,8 +96,17 @@ const Recipes = () => {
   
   const confirmDelete = () => {
     if (deletingRecipeId) {
-      setRecipes(recipes.filter(recipe => recipe.id !== deletingRecipeId));
+      // Get existing recipes from localStorage
+      const savedRecipes = getSavedRecipes();
+      const updatedRecipes = savedRecipes.filter(recipe => recipe.id !== deletingRecipeId);
+      
+      // Save updated recipes back to localStorage
+      localStorage.setItem('savedRecipes', JSON.stringify(updatedRecipes));
+      
+      // Update state
+      setRecipes(updatedRecipes);
       setDeletingRecipeId(null);
+      
       toast({
         title: t("recipes.deleted"),
         description: t("recipes.recipeDeleted")
@@ -160,17 +114,55 @@ const Recipes = () => {
     }
   };
   
-  const handleApplyToPlant = () => {
-    // Close the dialog first
-    setApplyingRecipeId(null);
+  const handleApplyToPlant = (recipeId) => {
+    setApplyingRecipeId(recipeId);
+  };
+  
+  const confirmApplyToPlant = () => {
+    if (!selectedPlantId || !applyingRecipeId) {
+      toast({
+        title: t("common.error"),
+        description: t("recipes.selectPlant"),
+        variant: "destructive"
+      });
+      return;
+    }
     
-    // Navigate to the plants page or show a plant selection dialog
-    navigate("/plants");
+    const recipe = recipes.find(r => r.id === applyingRecipeId);
+    const allPlants = getPlants();
+    const plantIndex = allPlants.findIndex(p => p.id === selectedPlantId);
     
-    toast({
-      title: t("recipes.applyReady"),
-      description: t("recipes.selectPlantToApply")
-    });
+    if (recipe && plantIndex !== -1) {
+      // Add recipe to plant's recipes
+      if (!allPlants[plantIndex].recipes) {
+        allPlants[plantIndex].recipes = [];
+      }
+      
+      const recipeToAdd = {
+        id: recipe.id,
+        name: recipe.name,
+        date: new Date().toLocaleDateString()
+      };
+      
+      allPlants[plantIndex].recipes.unshift(recipeToAdd);
+      allPlants[plantIndex].lastUpdated = new Date().toISOString();
+      
+      // Update plants in localStorage
+      savePlants(allPlants);
+      
+      // Show success message
+      toast({
+        title: t("common.success"),
+        description: t("recipes.recipeAppliedToPlant")
+      });
+      
+      // Reset and close dialog
+      setApplyingRecipeId(null);
+      setSelectedPlantId(null);
+      
+      // Navigate to the plant details
+      navigate(`/plants/${selectedPlantId}`);
+    }
   };
   
   return (
@@ -223,8 +215,13 @@ const Recipes = () => {
                   <h4 className="font-medium">Substances:</h4>
                   {recipe.substances.map((substance) => (
                     <div key={substance.id} className="flex justify-between text-sm">
-                      <span>{substance.name}</span>
-                      <span>{substance.amount} g/L</span>
+                      <span className="flex items-center">
+                        {substance.name}
+                        {substance.custom && (
+                          <Badge variant="outline" className="ml-2 text-xs">Custom</Badge>
+                        )}
+                      </span>
+                      <span>{substance.amount.toFixed(3)} g/L</span>
                     </div>
                   ))}
                 </div>
@@ -232,14 +229,19 @@ const Recipes = () => {
                 <div className="mt-4">
                   <h4 className="font-medium mb-2">Elements (ppm):</h4>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(recipe.elements).map(([element, value]) => (
-                      <span 
-                        key={element} 
-                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted"
-                      >
-                        {t(`elements.${element}`) || element}: {value}
-                      </span>
-                    ))}
+                    {Object.entries(recipe.elementConcentrations).map(([element, value]) => {
+                      // Skip elements with zero or very small values
+                      if (Math.abs(value) < 0.01) return null;
+                      
+                      return (
+                        <span 
+                          key={element} 
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted"
+                        >
+                          {t(`elements.${element}`) || element}: {parseFloat(value).toFixed(1)}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
@@ -272,7 +274,7 @@ const Recipes = () => {
                   </Button>
                   <Button 
                     size="sm"
-                    onClick={() => setApplyingRecipeId(recipe.id)}
+                    onClick={() => handleApplyToPlant(recipe.id)}
                   >
                     <Leaf className="h-4 w-4 mr-2" />
                     {t("recipes.applyToPlant")}
@@ -314,15 +316,55 @@ const Recipes = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p>{t("recipes.navigateToPlants")}</p>
+            {plants.length > 0 ? (
+              <div className="space-y-2">
+                {plants.map(plant => (
+                  <div 
+                    key={plant.id} 
+                    className={`p-3 border rounded-md cursor-pointer flex items-center ${
+                      selectedPlantId === plant.id ? 'border-primary bg-primary/10' : ''
+                    }`}
+                    onClick={() => setSelectedPlantId(plant.id)}
+                  >
+                    {plant.image && (
+                      <img 
+                        src={plant.image} 
+                        alt={plant.name} 
+                        className="w-10 h-10 rounded-full object-cover mr-3"
+                      />
+                    )}
+                    <div>
+                      <div className="font-medium">{plant.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {plant.strain} • {plant.currentStage}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4">
+                <p className="text-muted-foreground">{t("plants.noPlants")}</p>
+                <Button className="mt-4" asChild>
+                  <Link to="/plants">
+                    {t("plants.addPlant")}
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setApplyingRecipeId(null)}>
+            <Button variant="outline" onClick={() => {
+              setApplyingRecipeId(null);
+              setSelectedPlantId(null);
+            }}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={handleApplyToPlant}>
-              <Leaf className="h-4 w-4 mr-2" />
-              {t("recipes.goToPlants")}
+            <Button 
+              onClick={confirmApplyToPlant}
+              disabled={!selectedPlantId || plants.length === 0}
+            >
+              {t("common.apply")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -30,6 +30,7 @@
     "substanceSelection": "Seleção de Substâncias",
     "substanceDatabase": "Banco de Dados de Substâncias",
     "addCustom": "Adicionar Customizado",
+    "addCustomSubstance": "Adicionar Substância Personalizada",
     "search": "Pesquisar substâncias...",
     "calculate": "Calcular Solução Nutritiva",
     "clearValues": "Limpar Valores",
@@ -47,7 +48,8 @@
     "ecDescription": "A Condutividade Elétrica (EC) é uma estimativa baseada no total de nutrientes dissolvidos",
     "exportRecipe": "Exportar Receita (CSV)",
     "copyResults": "Copiar Resultados",
-    "saveRecipe": "Salvar Receita"
+    "saveRecipe": "Salvar Receita",
+    "calculationNotes": "Notas de cálculo"
   },
   "plants": {
     "title": "Minhas Plantas",
@@ -72,7 +74,15 @@
     "applyRecipe": "Aplicar Receita",
     "viewDetails": "Ver Detalhes",
     "deletePlant": "Deletar Planta",
-    "confirmDelete": "Tem certeza que deseja deletar esta planta?"
+    "confirmDelete": "Tem certeza que deseja deletar esta planta?",
+    "editPlant": "Editar Planta",
+    "plantUpdated": "Planta atualizada com sucesso",
+    "updated": "Atualizada",
+    "notFound": "Planta não encontrada",
+    "plantNotFound": "A planta que você está procurando não existe",
+    "deletedSuccessfully": "Planta deletada",
+    "plantHasBeenDeleted": "A planta foi deletada com sucesso",
+    "deleteWarning": "Esta ação não pode ser desfeita"
   },
   "recipes": {
     "title": "Receitas de Nutrientes",
@@ -85,7 +95,19 @@
     "lastUsed": "Último Uso",
     "deleteRecipe": "Deletar Receita",
     "confirmDelete": "Tem certeza que deseja deletar esta receita?",
-    "applyToPlant": "Aplicar à Planta"
+    "applyToPlant": "Aplicar à Planta",
+    "deleted": "Receita deletada",
+    "recipeDeleted": "A receita foi deletada com sucesso",
+    "copied": "Receita copiada",
+    "recipeCopiedToClipboard": "A receita foi copiada para a área de transferência",
+    "downloaded": "Receita baixada",
+    "recipeDownloaded": "A receita foi baixada como CSV",
+    "applyReady": "Pronto para aplicar",
+    "selectPlantToApply": "Selecione uma planta para aplicar esta receita",
+    "navigateToPlants": "Você será redirecionado para a página de plantas para selecionar uma planta",
+    "goToPlants": "Ir para Plantas",
+    "saved": "Receita salva",
+    "recipeSaved": "Sua receita foi salva com sucesso"
   },
   "profile": {
     "title": "Perfil",
@@ -122,7 +144,8 @@
     "liters": "Litros (L)",
     "gallons": "Galões (gal)",
     "free": "Gratuito",
-    "premium": "Premium"
+    "premium": "Premium",
+    "view": "Ver"
   },
   "elements": {
     "N(NO3-)": "N (NO3-)",

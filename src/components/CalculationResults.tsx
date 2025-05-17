@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,16 @@ import { Save, Download, Copy } from 'lucide-react';
 import { Element } from "@/logic/CalculatorLogic";
 import { toast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface CalculationResultsProps {
   results: any;
@@ -30,8 +40,49 @@ const CalculationResults: React.FC<CalculationResultsProps> = ({
   copyResultsToClipboard
 }) => {
   const { t } = useTranslation();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [recipeName, setRecipeName] = useState("");
+  const [recipeDescription, setRecipeDescription] = useState("");
   
   if (!results) return null;
+  
+  const handleSaveClick = () => {
+    setSaveDialogOpen(true);
+  };
+  
+  const saveRecipe = () => {
+    // Get existing recipes or initialize an empty array
+    const existingRecipes = JSON.parse(localStorage.getItem('savedRecipes') || '[]');
+    
+    // Create a new recipe object
+    const newRecipe = {
+      id: Date.now().toString(),
+      name: recipeName || `Recipe ${existingRecipes.length + 1}`,
+      description: recipeDescription,
+      substances: results.substances,
+      elementConcentrations: results.elementConcentrations,
+      predictedEc: results.predictedEc,
+      stage: "Any", // This could be made dynamic
+      lastUsed: new Date().toISOString(),
+      solutionVolume,
+      volumeUnit,
+      massUnit
+    };
+    
+    // Add the new recipe and save to localStorage
+    existingRecipes.push(newRecipe);
+    localStorage.setItem('savedRecipes', JSON.stringify(existingRecipes));
+    
+    // Close the dialog and show success toast
+    setSaveDialogOpen(false);
+    setRecipeName("");
+    setRecipeDescription("");
+    
+    toast({
+      title: t("recipes.saved"),
+      description: t("recipes.recipeSaved")
+    });
+  };
 
   return (
     <Card className="mt-6">
@@ -133,8 +184,7 @@ const CalculationResults: React.FC<CalculationResultsProps> = ({
             </Button>
             <Button 
               className="flex-1" 
-              onClick={onSaveClick}
-              disabled
+              onClick={handleSaveClick}
             >
               <Save className="mr-2 h-4 w-4" />
               {t("calculator.saveRecipe")}
@@ -142,6 +192,47 @@ const CalculationResults: React.FC<CalculationResultsProps> = ({
           </div>
         </div>
       </CardContent>
+      
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("calculator.saveRecipe")}</DialogTitle>
+            <DialogDescription>
+              {t("recipes.enterRecipeDetails")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="recipe-name">{t("recipes.recipeName")}</Label>
+              <Input
+                id="recipe-name"
+                value={recipeName}
+                onChange={(e) => setRecipeName(e.target.value)}
+                placeholder={`Recipe ${new Date().toLocaleDateString()}`}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="recipe-description">{t("recipes.recipeDescription")}</Label>
+              <Input
+                id="recipe-description"
+                value={recipeDescription}
+                onChange={(e) => setRecipeDescription(e.target.value)}
+                placeholder={t("recipes.optionalDescription")}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={saveRecipe}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

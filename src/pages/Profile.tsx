@@ -1,212 +1,253 @@
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { Link } from "react-router-dom";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 
-// Mock user data - would come from Supabase auth in production
+// Mock user data
 const mockUser = {
-  id: "user_123",
   name: "John Doe",
   email: "john.doe@example.com",
-  subscription: {
-    plan: "free",
-    expiresAt: "2025-06-15T00:00:00Z",
-  }
+  plan: "Free"
 };
 
 const Profile = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [user, setUser] = useState(mockUser);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [language, setLanguage] = useState(i18n.language);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user.name,
+    email: user.email
   });
   
-  const handleLanguageChange = (value: string) => {
-    setLanguage(value);
-    i18n.changeLanguage(value);
-    localStorage.setItem("language", value);
+  const handleSaveProfile = () => {
+    setUser(prev => ({
+      ...prev,
+      name: formData.name,
+      email: formData.email
+    }));
+    setIsEditingProfile(false);
   };
   
-  const handleThemeChange = (value: boolean) => {
-    const newTheme = value ? "dark" : "light";
-    setTheme(newTheme);
-    document.documentElement.classList.toggle("dark", value);
-    localStorage.setItem("theme", newTheme);
-  };
-  
-  const handleLogout = () => {
-    // In a real app, this would call the Supabase auth.signOut() method
-    console.log("Logging out...");
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
   
   return (
-    <div className="container mx-auto max-w-3xl">
+    <div className="container mx-auto">
       <h1 className="text-3xl font-bold mb-6">{t("profile.title")}</h1>
       
-      <Tabs defaultValue="account">
-        <TabsList className="w-full grid grid-cols-3 mb-6">
-          <TabsTrigger value="account">{t("profile.personalInfo")}</TabsTrigger>
-          <TabsTrigger value="subscription">{t("profile.subscription")}</TabsTrigger>
-          <TabsTrigger value="settings">{t("profile.settings")}</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("profile.personalInfo")}</CardTitle>
-              <CardDescription>
-                Update your personal information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="name">{t("profile.name")}</Label>
-                <Input id="name" defaultValue={user.name} />
-              </div>
-              <div>
-                <Label htmlFor="email">{t("profile.email")}</Label>
-                <Input id="email" type="email" defaultValue={user.email} />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="destructive">{t("profile.deleteAccount")}</Button>
-              <Button>{t("common.save")}</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="subscription">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("profile.subscription")}</CardTitle>
-              <CardDescription>
-                Manage your subscription
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted p-4 rounded-md">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium">{t("profile.currentPlan")}:</span>
-                  <span className="capitalize">
-                    {user.subscription.plan === "free" ? t("common.free") : t("common.premium")}
-                  </span>
-                </div>
-                {user.subscription.plan === "premium" && (
-                  <div className="flex justify-between">
-                    <span className="font-medium">Expires:</span>
-                    <span>{new Date(user.subscription.expiresAt).toLocaleDateString()}</span>
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-1">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">{t("profile.personalInfo")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isEditingProfile ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">{t("profile.name")}</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">{t("profile.email")}</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setIsEditingProfile(false)}>
+                        {t("common.cancel")}
+                      </Button>
+                      <Button onClick={handleSaveProfile}>
+                        {t("common.save")}
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                {user.subscription.plan === "free" ? (
-                  <Button className="w-full">
-                    {t("profile.upgradeAccount")}
-                  </Button>
                 ) : (
-                  <>
-                    <Button className="w-full">
-                      {t("profile.manageSubscription")}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{t("profile.name")}</p>
+                      <p>{user.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{t("profile.email")}</p>
+                      <p>{user.email}</p>
+                    </div>
+                    <Button onClick={() => setIsEditingProfile(true)}>
+                      {t("common.edit")}
                     </Button>
-                    <Button variant="outline" className="w-full">
-                      {t("profile.cancelSubscription")}
-                    </Button>
-                  </>
+                  </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("profile.settings")}</CardTitle>
-              <CardDescription>
-                Customize your experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="language">{t("profile.language")}</Label>
-                <Select value={language} onValueChange={handleLanguageChange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={t("profile.language")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="pt">Português</SelectItem>
-                    <SelectItem value="br">Português (Brasil)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="dark-mode">{t("profile.darkMode")}</Label>
-                <Switch 
-                  id="dark-mode"
-                  checked={theme === "dark"}
-                  onCheckedChange={handleThemeChange}
-                />
-              </div>
-              
-              <div className="pt-4">
-                <h3 className="font-medium mb-2">{t("profile.notificationSettings")}</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email-notifications">Email Notifications</Label>
-                    <Switch 
-                      id="email-notifications"
-                      checked={notifications.email}
-                      onCheckedChange={(checked) => setNotifications({...notifications, email: checked})}
-                    />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">{t("profile.subscription")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{t("profile.currentPlan")}</p>
+                    <p>{user.plan}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="push-notifications">Push Notifications</Label>
-                    <Switch 
-                      id="push-notifications"
-                      checked={notifications.push}
-                      onCheckedChange={(checked) => setNotifications({...notifications, push: checked})}
-                    />
-                  </div>
+                  <Button asChild>
+                    <Link to="/upgrade">{t("profile.upgradeAccount")}</Link>
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleLogout} className="w-full">
-                {t("profile.logout")}
-              </Button>
-            </CardFooter>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <div className="md:col-span-2">
+          <Card>
+            <Tabs defaultValue="account">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">{t("profile.settings")}</CardTitle>
+                  <TabsList>
+                    <TabsTrigger value="account">Account</TabsTrigger>
+                    <TabsTrigger value="preferences">Preferences</TabsTrigger>
+                    <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                  </TabsList>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <TabsContent value="account" className="space-y-6">
+                  <div className="space-y-1">
+                    <h3 className="font-medium text-lg">{t("profile.deleteAccount")}</h3>
+                    <p className="text-sm text-muted-foreground">{t("profile.deleteAccountWarning")}</p>
+                    <Button 
+                      variant="destructive" 
+                      className="mt-2"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      {t("profile.deleteAccount")}
+                    </Button>
+                  </div>
+                  
+                  <div className="pt-6 border-t">
+                    <Button variant="outline">
+                      {t("profile.logout")}
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="preferences" className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="font-medium text-lg">{t("profile.language")}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Select your preferred language
+                      </p>
+                      <LanguageSelector />
+                    </div>
+                    
+                    <div className="space-y-1 pt-6 border-t">
+                      <h3 className="font-medium text-lg">{t("profile.darkMode")}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Toggle between light and dark mode
+                      </p>
+                      <div>
+                        <Button variant="outline" className="mr-2">Light</Button>
+                        <Button variant="outline">Dark</Button>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="notifications" className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="font-medium text-lg">{t("profile.notificationSettings")}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Manage your notification preferences
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Email notifications</p>
+                          <p className="text-sm text-muted-foreground">Receive updates via email</p>
+                        </div>
+                        <Button variant="outline" size="sm">Enable</Button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Push notifications</p>
+                          <p className="text-sm text-muted-foreground">Receive updates on your device</p>
+                        </div>
+                        <Button variant="outline" size="sm">Enable</Button>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </CardContent>
+            </Tabs>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("profile.confirmDelete")}</DialogTitle>
+            <DialogDescription>
+              {t("plants.deleteWarning")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-destructive font-medium">
+              This action will permanently delete:
+            </p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>Your profile and personal information</li>
+              <li>All your saved plants and their data</li>
+              <li>All your saved recipes</li>
+              <li>Your custom substances</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive">
+              {t("profile.deleteAccount")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

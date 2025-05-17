@@ -15,8 +15,8 @@ export const LanguageSelector = () => {
 
   const languages = [
     { code: "en", label: "English" },
-    { code: "pt", label: "Português" },
     { code: "br", label: "Português (Brasil)" },
+    { code: "es", label: "Español" },
   ];
 
   const changeLanguage = (lng: string) => {
