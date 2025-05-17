@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,7 +11,16 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Leaf, Calculator, Trash, Copy, Download } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 
 // Mock recipes data - would come from Supabase in production
 const mockRecipes = [
@@ -82,7 +92,86 @@ const mockRecipes = [
 
 const Recipes = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [recipes, setRecipes] = useState(mockRecipes);
+  const [deletingRecipeId, setDeletingRecipeId] = useState<string | null>(null);
+  const [applyingRecipeId, setApplyingRecipeId] = useState<string | null>(null);
+  
+  const handleCopyRecipe = (recipe) => {
+    // Create a text representation of the recipe
+    let recipeText = `${recipe.name}\n`;
+    recipeText += `${recipe.description}\n\n`;
+    recipeText += `Stage: ${recipe.stage}\n\n`;
+    
+    recipeText += "Substances:\n";
+    recipe.substances.forEach(substance => {
+      recipeText += `- ${substance.name}: ${substance.amount} g/L\n`;
+    });
+    
+    recipeText += "\nElements (ppm):\n";
+    Object.entries(recipe.elements).forEach(([element, value]) => {
+      recipeText += `- ${element}: ${value}\n`;
+    });
+    
+    navigator.clipboard.writeText(recipeText);
+    toast({
+      title: t("recipes.copied"),
+      description: t("recipes.recipeCopiedToClipboard")
+    });
+  };
+  
+  const handleDownloadCSV = (recipe) => {
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Name,Amount (g/L)\n";
+    
+    recipe.substances.forEach(substance => {
+      csvContent += `${substance.name},${substance.amount}\n`;
+    });
+    
+    csvContent += "\nElement,PPM\n";
+    Object.entries(recipe.elements).forEach(([element, value]) => {
+      csvContent += `${element},${value}\n`;
+    });
+    
+    // Create download link and trigger download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${recipe.name.replace(/ /g, "_")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: t("recipes.downloaded"),
+      description: t("recipes.recipeDownloaded")
+    });
+  };
+  
+  const confirmDelete = () => {
+    if (deletingRecipeId) {
+      setRecipes(recipes.filter(recipe => recipe.id !== deletingRecipeId));
+      setDeletingRecipeId(null);
+      toast({
+        title: t("recipes.deleted"),
+        description: t("recipes.recipeDeleted")
+      });
+    }
+  };
+  
+  const handleApplyToPlant = () => {
+    // Close the dialog first
+    setApplyingRecipeId(null);
+    
+    // Navigate to the plants page or show a plant selection dialog
+    navigate("/plants");
+    
+    toast({
+      title: t("recipes.applyReady"),
+      description: t("recipes.selectPlantToApply")
+    });
+  };
   
   return (
     <div className="container mx-auto">
@@ -156,20 +245,35 @@ const Recipes = () => {
               </CardContent>
               <CardFooter className="flex justify-between">
                 <div className="space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleCopyRecipe(recipe)}
+                  >
                     <Copy className="h-4 w-4 mr-2" />
                     Copy
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDownloadCSV(recipe)}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     CSV
                   </Button>
                 </div>
                 <div className="space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setDeletingRecipeId(recipe.id)}
+                  >
                     <Trash className="h-4 w-4" />
                   </Button>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => setApplyingRecipeId(recipe.id)}
+                  >
                     <Leaf className="h-4 w-4 mr-2" />
                     {t("recipes.applyToPlant")}
                   </Button>
@@ -179,6 +283,50 @@ const Recipes = () => {
           ))}
         </div>
       )}
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingRecipeId} onOpenChange={(open) => !open && setDeletingRecipeId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("recipes.confirmDelete")}</DialogTitle>
+            <DialogDescription>
+              {t("recipes.deleteWarning")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingRecipeId(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              {t("common.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Apply Recipe Dialog */}
+      <Dialog open={!!applyingRecipeId} onOpenChange={(open) => !open && setApplyingRecipeId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("recipes.applyToPlant")}</DialogTitle>
+            <DialogDescription>
+              {t("recipes.selectPlantToApply")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p>{t("recipes.navigateToPlants")}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApplyingRecipeId(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleApplyToPlant}>
+              <Leaf className="h-4 w-4 mr-2" />
+              {t("recipes.goToPlants")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

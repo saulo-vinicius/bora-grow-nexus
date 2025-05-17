@@ -1,9 +1,12 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaf, Plus, Edit, Trash } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 // This is a mock for testing - would come from Supabase in production
 const mockPlants = [
@@ -37,7 +40,30 @@ const mockPlants = [
 
 const Plants = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [plants, setPlants] = useState(mockPlants);
+  const [deletingPlantId, setDeletingPlantId] = useState<string | null>(null);
+  
+  const handleDeletePlant = (id: string) => {
+    setDeletingPlantId(id);
+  };
+  
+  const confirmDelete = () => {
+    if (deletingPlantId) {
+      const updatedPlants = plants.filter(plant => plant.id !== deletingPlantId);
+      setPlants(updatedPlants);
+      setDeletingPlantId(null);
+      toast({
+        title: t("plants.deletedSuccessfully"),
+        description: t("plants.plantHasBeenDeleted"),
+      });
+    }
+  };
+  
+  const handleEditPlant = (id: string) => {
+    // Navigate to edit page or open edit modal
+    navigate(`/plants/${id}/edit`);
+  };
   
   return (
     <div className="container mx-auto">
@@ -100,10 +126,18 @@ const Plants = () => {
                   </Link>
                 </Button>
                 <div className="space-x-2">
-                  <Button variant="ghost" size="icon">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleEditPlant(plant.id)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleDeletePlant(plant.id)}
+                  >
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>
@@ -134,6 +168,25 @@ const Plants = () => {
           )}
         </div>
       )}
+      
+      <Dialog open={!!deletingPlantId} onOpenChange={(open) => !open && setDeletingPlantId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("plants.confirmDelete")}</DialogTitle>
+            <DialogDescription>
+              {t("plants.deleteWarning")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingPlantId(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              {t("common.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -12,6 +12,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Home from "./pages/Home";
 import Plants from "./pages/Plants";
 import PlantDetail from "./pages/PlantDetail";
+import PlantEdit from "./pages/PlantEdit";
 import Calculator from "./pages/Calculator";
 import Recipes from "./pages/Recipes";
 import Profile from "./pages/Profile";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/plants" element={<Plants />} />
             <Route path="/plants/:plantId" element={<PlantDetail />} />
+            <Route path="/plants/:plantId/edit" element={<PlantEdit />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/profile" element={<Profile />} />

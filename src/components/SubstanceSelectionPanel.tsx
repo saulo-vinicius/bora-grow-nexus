@@ -47,6 +47,13 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
     });
   };
 
+  // Helper function to handle decimal separators (comma or period)
+  const handleAmountChange = (id: string, value: string) => {
+    // Replace comma with period for decimal values
+    const normalizedValue = value.replace(',', '.');
+    onSubstanceAmountChange(id, normalizedValue);
+  };
+
   const getElementHighlights = (target: Record<Element, number>, substance: SubstanceData) => {
     const highlights: Element[] = [];
     
@@ -149,10 +156,11 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
                       id={`amount-${substance.id}`}
                       type="number"
                       value={substance.amount?.toFixed(3) || "0"}
-                      onChange={(e) => onSubstanceAmountChange(substance.id, e.target.value)}
+                      onChange={(e) => handleAmountChange(substance.id, e.target.value)}
                       min="0"
                       step="0.001"
                       className="mt-1"
+                      inputMode="decimal"
                     />
                   </div>
                 </div>
