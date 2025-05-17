@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -149,7 +148,11 @@ const Calculator = () => {
   
   const selectSubstance = (substance: SubstanceData) => {
     if (!selectedSubstances.find(s => s.id === substance.id)) {
-      setSelectedSubstances([...selectedSubstances, { ...substance, amount: 0 }]);
+      const substanceWithAmount: SubstanceData = { 
+        ...substance, 
+        amount: 0 
+      };
+      setSelectedSubstances([...selectedSubstances, substanceWithAmount]);
     }
   };
   
@@ -200,7 +203,12 @@ const Calculator = () => {
       );
       
       // Update selected substances with calculated amounts
-      setSelectedSubstances(calculationResults.substances);
+      const updatedSubstances = calculationResults.substances.map(substance => ({
+        ...substance,
+        formula: substance.formula || '',  // Ensure formula exists
+      })) as SubstanceData[];
+      
+      setSelectedSubstances(updatedSubstances);
       
       setResults(calculationResults);
     } catch (error) {

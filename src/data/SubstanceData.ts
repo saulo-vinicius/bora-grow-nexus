@@ -8,6 +8,7 @@ export interface SubstanceData {
   elements: Record<Element, number>;
   custom?: boolean;
   user_id?: string;
+  amount?: number;
 }
 
 // This is the full set of 24 standard HydroBuddy salts

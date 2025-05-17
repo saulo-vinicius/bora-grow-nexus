@@ -148,7 +148,7 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
                     <Input
                       id={`amount-${substance.id}`}
                       type="number"
-                      value={substance.amount?.toFixed(3) || 0}
+                      value={substance.amount?.toFixed(3) || "0"}
                       onChange={(e) => onSubstanceAmountChange(substance.id, e.target.value)}
                       min="0"
                       step="0.001"

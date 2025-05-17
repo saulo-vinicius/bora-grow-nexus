@@ -25,6 +25,8 @@ export interface Substance {
   formula?: string;
   elements: Record<Element, number>;
   amount?: number;
+  custom?: boolean;
+  user_id?: string;
 }
 
 export interface CalculationResult {
