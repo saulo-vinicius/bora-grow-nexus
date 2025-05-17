@@ -80,10 +80,14 @@ const PlantEdit = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Fix: Check that reader.result is a string before updating state
+        // Fix: Store the result as a string after type checking
         if (typeof reader.result === 'string') {
-          setUploadedImage(reader.result);
-          setFormData(prev => ({ ...prev, image: reader.result }));
+          const imageString = reader.result;
+          setUploadedImage(imageString);
+          setFormData(prev => ({ 
+            ...prev, 
+            image: imageString // Now TypeScript knows this is definitely a string
+          }));
         } else {
           console.error("Error: Image data is not a string");
         }
