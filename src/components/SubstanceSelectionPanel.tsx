@@ -1,17 +1,29 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus, Trash2 } from 'lucide-react';
 import { SubstanceData } from "@/data/SubstanceData";
 import { Element } from "@/logic/CalculatorLogic";
 import CustomSubstanceForm from './CustomSubstanceForm';
 import { toast } from "@/hooks/use-toast";
 import { getElementBgClass } from "@/lib/ElementUtils";
 import { DecimalInput } from "@/components/ui/decimal-input";
+import { useCustomSubstances } from "@/hooks/useCustomSubstances";
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SubstanceSelectionPanelProps {
   substances: SubstanceData[];
@@ -33,20 +45,50 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
   addCustomSubstance
 }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showCustomForm, setShowCustomForm] = useState<boolean>(false);
+  const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false);
+  const [substanceToDelete, setSubstanceToDelete] = useState<string | null>(null);
+  const { customSubstances, loading, addCustomSubstance: saveCustomSubstance, deleteCustomSubstance } = useCustomSubstances();
   
-  const filteredSubstances = substances.filter(substance => 
+  // Combine builtin substances with custom ones
+  const allSubstances = [...substances, ...customSubstances];
+  
+  const filteredSubstances = allSubstances.filter(substance => 
     substance.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddCustomSubstance = (substance: SubstanceData) => {
-    addCustomSubstance(substance);
-    setShowCustomForm(false);
-    toast({
-      title: t("calculator.customSubstanceAdded"),
-      description: t("calculator.customSubstanceAddedDescription")
-    });
+  const handleAddCustomSubstance = async (substance: SubstanceData) => {
+    // If not authenticated, prompt to sign in
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+    
+    const savedSubstance = await saveCustomSubstance(substance);
+    if (savedSubstance) {
+      addCustomSubstance(savedSubstance);
+      setShowCustomForm(false);
+      toast({
+        title: t("calculator.customSubstanceAdded"),
+        description: t("calculator.customSubstanceAddedDescription")
+      });
+    }
+  };
+  
+  const handleDeleteCustomSubstance = (id: string) => {
+    setSubstanceToDelete(id);
+  };
+  
+  const confirmDeleteSubstance = async () => {
+    if (substanceToDelete) {
+      await deleteCustomSubstance(substanceToDelete);
+      if (selectedSubstances.some(s => s.id === substanceToDelete)) {
+        onRemoveSubstance(substanceToDelete);
+      }
+      setSubstanceToDelete(null);
+    }
   };
 
   // Helper function to handle decimal separators (comma or period)
@@ -54,18 +96,6 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
     // Replace comma with period for decimal values
     const normalizedValue = value.replace(',', '.');
     onSubstanceAmountChange(id, normalizedValue);
-  };
-
-  const getElementHighlights = (target: Record<Element, number>, substance: SubstanceData) => {
-    const highlights: Element[] = [];
-    
-    Object.entries(target).forEach(([element, concentration]) => {
-      if (concentration > 0 && substance.elements[element as Element]) {
-        highlights.push(element as Element);
-      }
-    });
-    
-    return highlights;
   };
 
   return (
@@ -96,17 +126,35 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
               <div key={substance.id} className="border rounded-md p-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h4 className="font-medium">{substance.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{substance.name}</h4>
+                      {(substance as any).custom && (
+                        <span className="bg-primary/20 text-xs px-1.5 py-0.5 rounded text-primary">
+                          Custom
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">{substance.formula}</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => onSelectSubstance(substance)}
-                    disabled={selectedSubstances.some(s => s.id === substance.id)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    {(substance as any).custom && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteCustomSubstance(substance.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => onSelectSubstance(substance)}
+                      disabled={selectedSubstances.some(s => s.id === substance.id)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-2 space-x-2 flex flex-wrap gap-1">
                   {Object.entries(substance.elements).map(([element, percentage]) => (
@@ -171,6 +219,7 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
         </CardContent>
       </Card>
 
+      {/* Custom Substance Form Dialog */}
       <Dialog open={showCustomForm} onOpenChange={setShowCustomForm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -182,6 +231,44 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Authentication Prompt Dialog */}
+      <AlertDialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Login Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              You need to be logged in to save custom substances. Would you like to login or register now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button asChild>
+                <a href="/auth">Login / Register</a>
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!substanceToDelete} onOpenChange={() => setSubstanceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Custom Substance</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this custom substance? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDeleteSubstance}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
