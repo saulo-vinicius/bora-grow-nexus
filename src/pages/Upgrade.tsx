@@ -98,13 +98,6 @@ const UpgradePage = () => {
           </Card>
         ))}
       </div>
-      
-      <div className="mt-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          All plans include a 14-day money-back guarantee. <br />
-          Have questions? <a href="#" className="text-primary hover:underline">Contact our sales team</a>
-        </p>
-      </div>
     </div>
   );
 };

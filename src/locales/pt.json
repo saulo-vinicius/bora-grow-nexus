@@ -95,7 +95,15 @@
     "viewDetails": "Ver Detalhes",
     "deletePlant": "Excluir Planta",
     "confirmDelete": "Tem certeza que deseja excluir esta planta?",
-    "deleteAccountWarning": "Atenção: Esta ação irá excluir permanentemente sua conta e todos os seus dados. Essa ação não pode ser desfeita."
+    "deleteAccountWarning": "Atenção: Esta ação irá excluir permanentemente sua conta e todos os seus dados. Essa ação não pode ser desfeita.",
+    "editPlant": "Editar Planta",
+    "plantUpdated": "Planta atualizada com sucesso",
+    "updated": "Atualizada",
+    "notFound": "Planta não encontrada",
+    "plantNotFound": "A planta que você está procurando não existe",
+    "deletedSuccessfully": "Planta excluída",
+    "plantHasBeenDeleted": "A planta foi excluída com sucesso",
+    "deleteWarning": "Atenção: Esta ação não pode ser desfeita."
   },
   "recipes": {
     "title": "Receitas de Nutrientes",

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Link } from "react-router-dom";
 import { 
   Dialog, 
@@ -177,8 +178,7 @@ const Profile = () => {
                         Toggle between light and dark mode
                       </p>
                       <div>
-                        <Button variant="outline" className="mr-2">Light</Button>
-                        <Button variant="outline">Dark</Button>
+                        <ThemeToggle />
                       </div>
                     </div>
                   </div>
@@ -224,7 +224,7 @@ const Profile = () => {
           <DialogHeader>
             <DialogTitle>{t("profile.confirmDelete")}</DialogTitle>
             <DialogDescription>
-              {t("plants.deleteWarning")}
+              {t("profile.deleteAccountWarning")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
