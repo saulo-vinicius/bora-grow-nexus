@@ -11,6 +11,7 @@ import { Element } from "@/logic/CalculatorLogic";
 import CustomSubstanceForm from './CustomSubstanceForm';
 import { toast } from "@/hooks/use-toast";
 import { getElementBgClass } from "@/lib/ElementUtils";
+import { DecimalInput } from "@/components/ui/decimal-input";
 
 interface SubstanceSelectionPanelProps {
   substances: SubstanceData[];
@@ -122,7 +123,7 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
             
             {filteredSubstances.length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                No substances found
+                {t("calculator.noSubstancesFound")}
               </p>
             )}
           </div>
@@ -137,7 +138,7 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
           <div className="space-y-3">
             {selectedSubstances.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
-                No substances selected
+                {t("calculator.noSubstancesSelected")}
               </p>
             ) : (
               selectedSubstances.map((substance) => (
@@ -156,15 +157,11 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
                     <label htmlFor={`amount-${substance.id}`} className="text-sm font-medium">
                       {massUnit}
                     </label>
-                    <Input
+                    <DecimalInput
                       id={`amount-${substance.id}`}
-                      type="number"
-                      value={substance.amount?.toFixed(3) || "0"}
-                      onChange={(e) => handleAmountChange(substance.id, e.target.value)}
-                      min="0"
-                      step="0.001"
+                      value={substance.amount || 0}
+                      onChange={(value) => handleAmountChange(substance.id, value.toString())}
                       className="mt-1"
-                      inputMode="decimal"
                     />
                   </div>
                 </div>

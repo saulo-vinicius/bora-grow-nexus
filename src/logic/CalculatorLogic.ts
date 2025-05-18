@@ -94,64 +94,84 @@ export class CalculatorLogic {
       }
       
       let X;
+      let solveMethod = "exact"; // Track which solving method was used
       
       // Check if system is determined, underdetermined, or overdetermined
-      if (filteredA.length === substances.length) {
-        // Determined system: A is square
-        X = math.lusolve(filteredA, filteredB);
-      } else if (filteredA.length < substances.length) {
-        // Underdetermined system: more substances than constraints
-        // Use the pseudo-inverse to find a minimum norm solution
-        try {
+      try {
+        // First try direct solution
+        if (filteredA.length === substances.length) {
+          // Determined system: A is square
+          try {
+            X = math.lusolve(filteredA, filteredB);
+            solveMethod = "determined";
+          } catch (error) {
+            console.log("Error with lusolve on square matrix, trying pseudoinverse:", error);
+            // Fallback to pseudoinverse
+            const AT = math.transpose(filteredA);
+            const ATA = math.multiply(AT, filteredA);
+            
+            // Check if matrix is singular by testing if determinant is very close to 0
+            const det = math.det(ATA);
+            if (Math.abs(det) < 1e-10) {
+              throw new Error("Matrix is singular, cannot be inverted directly");
+            }
+            
+            const ATAinv = math.inv(ATA);
+            const Adag = math.multiply(ATAinv, AT);
+            X = math.multiply(Adag, filteredB);
+            X = X.map((val: number) => [Math.max(0, val)]);
+            solveMethod = "pseudoinverse-determined";
+          }
+        } else if (filteredA.length < substances.length) {
+          // Underdetermined system: more substances than constraints
+          solveMethod = "underdetermined";
           const AT = math.transpose(filteredA);
           const AAT = math.multiply(filteredA, AT);
-          const AATinv = math.inv(AAT);
-          const Adag = math.multiply(AT, AATinv);
-          X = math.multiply(Adag, filteredB);
           
-          // Convert to column vector format
-          X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
-        } catch (err) {
-          messages.push("Using simplified calculation for underdetermined system.");
-          // Fallback to a simpler approach if matrix calculations fail
-          X = Array(substances.length).fill([0]);
-          // Distribute the target values evenly among substances that provide each element
-          activeElements.forEach((element, idx) => {
-            const substancesWithElement = substances
-              .map((s, i) => ({ index: i, percentage: s.elements[element] || 0 }))
-              .filter(s => s.percentage > 0);
-              
-            if (substancesWithElement.length > 0) {
-              const totalPercentage = substancesWithElement.reduce((sum, s) => sum + s.percentage, 0);
-              substancesWithElement.forEach(s => {
-                X[s.index][0] += (activeTargets[idx] * s.percentage / totalPercentage) / s.percentage;
-              });
-            }
-          });
-        }
-      } else {
-        // Overdetermined system: more constraints than substances
-        try {
-          // Use the pseudo-inverse to find a least squares solution
+          try {
+            const AATinv = math.inv(AAT);
+            const Adag = math.multiply(AT, AATinv);
+            X = math.multiply(Adag, filteredB);
+            X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+          } catch (error) {
+            console.log("Error with pseudoinverse for underdetermined system:", error);
+            // Fallback to a simpler approach
+            X = this.calculateEvenDistribution(substances, activeElements, activeTargets);
+            solveMethod = "even-distribution";
+            messages.push("Using simplified calculation due to matrix singularity.");
+          }
+        } else {
+          // Overdetermined system: more constraints than substances
+          solveMethod = "overdetermined";
           const AT = math.transpose(filteredA);
           const ATA = math.multiply(AT, filteredA);
-          const ATAinv = math.inv(ATA);
-          const Adag = math.multiply(ATAinv, AT);
-          X = math.multiply(Adag, filteredB);
           
-          // Convert to column vector format
-          X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
-          
-          messages.push("Using least squares solution for overdetermined system.");
-        } catch (err) {
-          throw new Error("Failed to calculate least squares solution: " + err.message);
+          try {
+            const ATAinv = math.inv(ATA);
+            const Adag = math.multiply(ATAinv, AT);
+            X = math.multiply(Adag, filteredB);
+            X = X.map((val: number) => [Math.max(0, val)]); // Ensure non-negative values
+          } catch (error) {
+            console.log("Error with pseudoinverse for overdetermined system:", error);
+            // Fallback to a simpler approach
+            X = this.calculateEvenDistribution(substances, activeElements, activeTargets);
+            solveMethod = "even-distribution";
+            messages.push("Using simplified calculation due to matrix singularity.");
+          }
         }
+      } catch (error) {
+        console.log("Matrix solution error, using fallback approach:", error);
+        // Last resort fallback
+        X = this.calculateEvenDistribution(substances, activeElements, activeTargets);
+        solveMethod = "fallback-distribution";
+        messages.push("Using simplified calculation (approximate solution).");
       }
       
       // Update substances with calculated amounts
       const calculatedSubstances = substances.map((substance, index) => ({
         ...substance,
-        amount: X[index][0] * volumeInLiters
+        amount: (X[index] && X[index][0] !== undefined) ? 
+                X[index][0] * volumeInLiters : 0
       }));
       
       // Calculate actual element concentrations based on solution
@@ -199,6 +219,8 @@ export class CalculatorLogic {
         return sum + concentration * (elementContributions[element as Element] || 0);
       }, 0);
       
+      messages.push(`Calculation method used: ${solveMethod}`);
+      
       return {
         substances: calculatedSubstances,
         elementConcentrations: actualConcentrations,
@@ -209,6 +231,48 @@ export class CalculatorLogic {
       console.error("Error in nutrient solution calculation:", error);
       throw new Error(`Failed to calculate nutrient solution: ${error.message}`);
     }
+  }
+  
+  /**
+   * Alternative calculation method that distributes elements evenly
+   * Used as a fallback when matrix calculations fail
+   */
+  private calculateEvenDistribution(
+    substances: Substance[],
+    activeElements: Element[],
+    activeTargets: number[]
+  ): number[][] {
+    const X = Array(substances.length).fill([0]);
+    
+    // For each target element, distribute it among substances that provide it
+    activeElements.forEach((element, elementIndex) => {
+      const substancesWithElement = substances
+        .map((s, substanceIndex) => ({ 
+          index: substanceIndex, 
+          percentage: s.elements[element] || 0 
+        }))
+        .filter(s => s.percentage > 0);
+        
+      if (substancesWithElement.length > 0) {
+        const targetValue = activeTargets[elementIndex];
+        const totalPercentage = substancesWithElement.reduce(
+          (sum, s) => sum + s.percentage, 
+          0
+        );
+        
+        // Distribute proportionally to percentage content
+        substancesWithElement.forEach(s => {
+          const contribution = targetValue * (s.percentage / totalPercentage);
+          const massNeeded = contribution / s.percentage;
+          
+          // Update the value if it's larger than what's already there
+          const currentValue = X[s.index][0] || 0;
+          X[s.index] = [Math.max(currentValue, massNeeded)];
+        });
+      }
+    });
+    
+    return X;
   }
   
   /**

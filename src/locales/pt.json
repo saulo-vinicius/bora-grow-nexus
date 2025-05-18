@@ -30,6 +30,7 @@
     "substanceSelection": "Seleção de Substâncias",
     "substanceDatabase": "Base de Dados de Substâncias",
     "addCustom": "Adicionar Personalizado",
+    "addCustomSubstance": "Adicionar Substância Personalizada",
     "search": "Pesquisar substâncias...",
     "calculate": "Calcular Solução Nutritiva",
     "clearValues": "Limpar Valores",
@@ -47,7 +48,28 @@
     "ecDescription": "A Condutividade Elétrica (EC) é uma estimativa baseada no total de nutrientes dissolvidos",
     "exportRecipe": "Exportar Receita (CSV)",
     "copyResults": "Copiar Resultados",
-    "saveRecipe": "Salvar Receita"
+    "saveRecipe": "Salvar Receita",
+    "calculationNotes": "Notas de Cálculo",
+    "calculating": "Calculando...",
+    "noSubstancesFound": "Nenhuma substância encontrada",
+    "noSubstancesSelected": "Nenhuma substância selecionada",
+    "customSubstanceAdded": "Substância personalizada adicionada",
+    "customSubstanceAddedDescription": "A substância personalizada foi adicionada com sucesso",
+    "copiedToClipboard": "Copiado para a área de transferência",
+    "resultsCopied": "Os resultados foram copiados",
+    "copyError": "Erro na cópia",
+    "couldNotCopy": "Não foi possível copiar os resultados",
+    "exportSuccessful": "Exportação bem sucedida",
+    "fileDownloaded": "O arquivo foi baixado",
+    "errors": {
+      "noSubstancesSelected": "Nenhuma substância selecionada",
+      "noTargetsSpecified": "Nenhuma concentração alvo especificada",
+      "calculationError": "Erro de cálculo"
+    },
+    "substanceName": "Nome da Substância",
+    "substanceFormula": "Fórmula da Substância",
+    "elementContent": "Conteúdo do Elemento",
+    "addElement": "Adicionar Elemento"
   },
   "plants": {
     "title": "Minhas Plantas",
@@ -72,7 +94,8 @@
     "applyRecipe": "Aplicar Receita",
     "viewDetails": "Ver Detalhes",
     "deletePlant": "Excluir Planta",
-    "confirmDelete": "Tem certeza que deseja excluir esta planta?"
+    "confirmDelete": "Tem certeza que deseja excluir esta planta?",
+    "deleteAccountWarning": "Atenção: Esta ação irá excluir permanentemente sua conta e todos os seus dados. Essa ação não pode ser desfeita."
   },
   "recipes": {
     "title": "Receitas de Nutrientes",
@@ -85,7 +108,10 @@
     "lastUsed": "Último Uso",
     "deleteRecipe": "Excluir Receita",
     "confirmDelete": "Tem certeza que deseja excluir esta receita?",
-    "applyToPlant": "Aplicar à Planta"
+    "applyToPlant": "Aplicar à Planta",
+    "optionalDescription": "Descrição (opcional)",
+    "enterRecipeDetails": "Digite os detalhes da receita",
+    "recipeAppliedToPlant": "Receita aplicada à planta com sucesso"
   },
   "profile": {
     "title": "Perfil",
@@ -103,7 +129,8 @@
     "notificationSettings": "Configurações de Notificação",
     "deleteAccount": "Excluir Conta",
     "confirmDelete": "Tem certeza que deseja excluir sua conta? Esta ação é permanente.",
-    "logout": "Sair"
+    "logout": "Sair",
+    "deleteAccountWarning": "Atenção: Esta ação irá excluir permanentemente sua conta e todos os seus dados. Essa ação não pode ser desfeita."
   },
   "common": {
     "save": "Salvar",
@@ -122,7 +149,8 @@
     "liters": "Litros (L)",
     "gallons": "Galões (gal)",
     "free": "Gratuito",
-    "premium": "Premium"
+    "premium": "Premium",
+    "optional": "opcional"
   },
   "elements": {
     "N(NO3-)": "N (NO3-)",
