@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -80,15 +81,20 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
   };
   
   const handleDeleteCustomSubstance = (id: string) => {
+    console.log('Request to delete substance:', id);
     setSubstanceToDelete(id);
   };
   
   const confirmDeleteSubstance = async () => {
     if (substanceToDelete) {
+      console.log('Confirming deletion of substance:', substanceToDelete);
       await deleteCustomSubstance(substanceToDelete);
+      
+      // Also remove from selection if it exists there
       if (selectedSubstances.some(s => s.id === substanceToDelete)) {
         onRemoveSubstance(substanceToDelete);
       }
+      
       setSubstanceToDelete(null);
     }
   };

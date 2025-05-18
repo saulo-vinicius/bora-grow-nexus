@@ -22,12 +22,18 @@ export const useCustomSubstances = () => {
     
     setLoading(true);
     try {
+      console.log('Fetching custom substances for user:', user.id);
       const { data, error } = await supabase
         .from('custom_substances')
         .select('*')
         .eq('user_id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
+      
+      console.log('Fetched custom substances:', data);
       
       const formattedSubstances: SubstanceData[] = data.map(substance => ({
         id: substance.id,
@@ -100,22 +106,56 @@ export const useCustomSubstances = () => {
   };
 
   const deleteCustomSubstance = async (id: string) => {
+    console.log('Attempting to delete custom substance with ID:', id);
+    
     if (!user) {
+      console.log('No user logged in, updating local state only');
       // If not authenticated, just update the local state
       setCustomSubstances(customSubstances.filter(s => s.id !== id));
       return;
     }
     
     try {
-      const { error } = await supabase
+      console.log('Deleting from Supabase for user:', user.id);
+      
+      // First, let's check if the substance exists and belongs to the user
+      const { data: checkData, error: checkError } = await supabase
+        .from('custom_substances')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (checkError) {
+        console.error('Error checking substance:', checkError);
+        if (checkError.code === 'PGRST116') {
+          console.log('Substance not found or does not belong to user');
+        }
+      } else {
+        console.log('Substance found:', checkData);
+      }
+      
+      // Now proceed with deletion
+      const { data, error } = await supabase
         .from('custom_substances')
         .delete()
         .eq('id', id)
         .eq('user_id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Deletion error details:', error);
+        throw error;
+      }
       
-      setCustomSubstances(customSubstances.filter(s => s.id !== id));
+      console.log('Deletion response:', data);
+      
+      // Update state regardless of Supabase response to improve UX
+      setCustomSubstances(prevSubstances => prevSubstances.filter(s => s.id !== id));
+      
+      toast({
+        title: 'Success',
+        description: 'Custom substance deleted successfully',
+      });
     } catch (error) {
       console.error('Error deleting custom substance:', error);
       toast({

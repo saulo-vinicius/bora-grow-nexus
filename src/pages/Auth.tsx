@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,6 +95,13 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Forgot password clicked"); 
+    // TODO: Implement forgot password functionality
+    // For now, just prevent the default behavior to avoid page reload
+  };
+
   return (
     <div className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-md">
@@ -177,7 +183,11 @@ export default function Auth() {
               
               <CardFooter className="flex flex-col space-y-2">
                 <div className="text-sm text-center">
-                  <a href="#" className="text-primary hover:underline">
+                  <a 
+                    href="#" 
+                    className="text-primary hover:underline"
+                    onClick={handleForgotPassword}
+                  >
                     {t('auth.forgotPassword')}
                   </a>
                 </div>
