@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,15 +36,18 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function Auth() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, signUp, user } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // If user is already logged in, redirect to home
-  if (user) {
-    navigate('/');
-    return null;
-  }
+  // Use useEffect for navigation instead of during render
+  useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location.state]);
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -76,8 +79,6 @@ export default function Auth() {
       setAuthError(error.message);
       return;
     }
-    
-    navigate('/');
   };
   
   const handleSignup = async (values: SignupFormValues) => {
@@ -93,8 +94,6 @@ export default function Auth() {
       setAuthError(error.message);
       return;
     }
-    
-    navigate('/');
   };
 
   return (

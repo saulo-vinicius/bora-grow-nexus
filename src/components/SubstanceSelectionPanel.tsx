@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 interface SubstanceSelectionPanelProps {
   substances: SubstanceData[];
@@ -245,7 +247,7 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button asChild>
-                <a href="/auth">Login / Register</a>
+                <Link to="/auth">Login / Register</Link>
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -263,7 +265,10 @@ const SubstanceSelectionPanel: React.FC<SubstanceSelectionPanelProps> = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDeleteSubstance}>
+            <AlertDialogAction 
+              onClick={confirmDeleteSubstance}
+              className={cn(buttonVariants({ variant: "destructive" }))}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
